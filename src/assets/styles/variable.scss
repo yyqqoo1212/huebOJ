@@ -1,0 +1,70 @@
+// 样式变量定义
+
+// 颜色
+$primary-color: #1890ff;
+$primary-color-hover: #40a9ff;
+$primary-color-active: #096dd9;
+
+$success-color: #52c41a;
+$warning-color: #faad14;
+$error-color: #ff4d4f;
+$info-color: #1890ff;
+
+// 文本颜色
+$text-color-primary: #333333;
+$text-color-secondary: #666666;
+$text-color-disabled: #999999;
+$text-color-inverse: #ffffff;
+
+// 背景颜色
+$bg-color-base: #ffffff;
+$bg-color-light: #fafafa;
+$bg-color-dark: #f0f0f0;
+
+// 边框颜色
+$border-color-base: #e8e8e8;
+$border-color-light: #f0f0f0;
+$border-color-dark: #d9d9d9;
+
+// 阴影
+$box-shadow-base: 0 2px 8px rgba(0, 0, 0, 0.15);
+$box-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+// 圆角
+$border-radius-base: 4px;
+$border-radius-lg: 8px;
+$border-radius-sm: 2px;
+
+// 间距
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 16px;
+$spacing-lg: 24px;
+$spacing-xl: 32px;
+
+// 字体大小
+$font-size-xs: 12px;
+$font-size-sm: 14px;
+$font-size-base: 16px;
+$font-size-lg: 18px;
+$font-size-xl: 20px;
+$font-size-xxl: 24px;
+
+// 行高
+$line-height-base: 1.5;
+$line-height-lg: 1.8;
+
+// 过渡动画
+$transition-base: all 0.3s ease;
+
+// 难度颜色
+$difficulty-easy: #52c41a;
+$difficulty-medium: #faad14;
+$difficulty-hard: #ff4d4f;
+
+// 提交状态颜色
+$status-pending: #1890ff;
+$status-judging: #722ed1;
+$status-accepted: #52c41a;
+$status-error: #ff4d4f;
+
