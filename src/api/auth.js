@@ -5,6 +5,7 @@ export const register = (payload) =>
     username: payload.username,
     password: payload.password,
     email: payload.email,
+    gender: payload.gender || 'M',
     motto: payload.motto || '',
     avatar_url: payload.avatarUrl || ''
   })

@@ -40,7 +40,6 @@
         </div>
       </div>
     </div>
-
   </div>
 </template>
 
@@ -52,7 +51,6 @@ const { isLoggedIn } = useAuth()
 </script>
 
 <style scoped lang="scss">
-// 此处需要安装 npm install -D sass sass-loader
 @import '@/assets/styles/variable.scss';
 
 .home {

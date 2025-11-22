@@ -16,8 +16,19 @@
 
       <div class="navbar-right">
         <template v-if="isLoggedIn">
+          <router-link to="/settings" class="avatar-link">
+            <img
+              v-if="user?.avatar_url"
+              :src="user.avatar_url"
+              :alt="username"
+              class="avatar-img"
+            />
+            <div v-else class="avatar-placeholder">
+              {{ username?.charAt(0)?.toUpperCase() || 'U' }}
+            </div>
+          </router-link>
           <router-link to="/settings" class="nav-item">
-            {{ username }} 设置
+            {{ username }}
           </router-link>
           <button class="logout-btn" @click="handleLogout">登出</button>
         </template>
@@ -35,7 +46,7 @@ import { useRouter } from 'vue-router'
 import { useAuth } from '@/composbles/useAuth'
 
 const router = useRouter()
-const { isLoggedIn, username, logout} = useAuth()
+const { isLoggedIn, username, user, logout} = useAuth()
 
 const handleLogout = () => {
   logout()
@@ -110,7 +121,7 @@ const handleLogout = () => {
 .nav-item {
   color: #333333;
   text-decoration: none;
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 500;
   padding: 8px 12px;
   border-radius: 4px;
@@ -130,6 +141,51 @@ const handleLogout = () => {
 .navbar-right {
   display: flex;
   align-items: center;
+  gap: 12px;
+}
+
+.avatar-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.avatar-img {
+  width: 45px;
+  height: 45px;
+  border-radius: 60%;
+  object-fit: cover;
+  border: 2px solid #e0e0e0;
+  transition: all 0.3s ease;
+}
+
+.avatar-link:hover .avatar-img {
+  border-color: #1890ff;
+  transform: scale(1.05);
+}
+
+.avatar-placeholder {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1890ff, #40a9ff);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 600;
+  border: 2px solid #e0e0e0;
+  transition: all 0.3s ease;
+}
+
+.avatar-link:hover .avatar-placeholder {
+  border-color: #1890ff;
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3);
 }
 
 .account-btn:hover {

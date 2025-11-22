@@ -45,6 +45,30 @@
           <small v-if="errors.password">{{ errors.password }}</small>
         </div>
 
+        <div class="form-group">
+          <label for="gender">性别</label>
+          <div class="gender-options">
+            <label class="gender-option">
+              <input
+                id="gender-male"
+                v-model="form.gender"
+                type="radio"
+                value="M"
+              />
+              <span>男</span>
+            </label>
+            <label class="gender-option">
+              <input
+                id="gender-female"
+                v-model="form.gender"
+                type="radio"
+                value="F"
+              />
+              <span>女</span>
+            </label>
+          </div>
+        </div>
+
         <div class="form-group optional">
           <label for="motto">个性签名（可选）</label>
           <input
@@ -57,13 +81,53 @@
         </div>
 
         <div class="form-group optional">
-          <label for="avatar">头像链接（可选）</label>
-          <input
-            id="avatar"
-            v-model.trim="form.avatarUrl"
-            type="url"
-            placeholder="https://example.com/avatar.png"
-          />
+          <label for="avatar">头像（可选）</label>
+          <div class="avatar-upload-container">
+            <div v-if="avatarPreview" class="avatar-preview">
+              <img :src="avatarPreview" alt="头像预览" />
+              <button
+                type="button"
+                class="remove-avatar-btn"
+                @click="removeAvatar"
+                title="移除头像"
+              >
+                ×
+              </button>
+            </div>
+            <div v-else class="avatar-upload-placeholder">
+              <svg
+                width="48"
+                height="48"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"
+                ></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+              <span>点击上传头像</span>
+            </div>
+            <input
+              id="avatar"
+              ref="avatarInput"
+              type="file"
+              accept="image/*"
+              style="display: none"
+              @change="handleAvatarChange"
+            />
+            <button
+              type="button"
+              class="upload-btn"
+              :disabled="isUploadingAvatar"
+              @click="$refs.avatarInput?.click()"
+            >
+              {{ isUploadingAvatar ? '上传中...' : avatarPreview ? '更换头像' : '选择头像' }}
+            </button>
+            <small v-if="avatarError" class="avatar-error">{{ avatarError }}</small>
+          </div>
         </div>
 
         <p v-if="errors.general" class="form-error">{{ errors.general }}</p>
@@ -82,10 +146,11 @@
 </template>
 
 <script setup>
-import { reactive, computed, watch } from 'vue'
+import { reactive, computed, watch, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { validateRegisterForm, validateUsername, validatePassword, validateEmail } from '@/utils/validator'
+import { uploadFile } from '@/api/files'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -98,6 +163,7 @@ const form = reactive({
   username: '',
   email: '',
   password: '',
+  gender: 'M',
   motto: '',
   avatarUrl: ''
 })
@@ -108,6 +174,13 @@ const errors = reactive({
   password: '',
   general: ''
 })
+
+const avatarInput = ref(null)
+const avatarPreview = ref('')
+const avatarFile = ref(null)
+const avatarObjectKey = ref('')
+const isUploadingAvatar = ref(false)
+const avatarError = ref('')
 
 watch(
   () => [form.username, form.email, form.password],
@@ -145,6 +218,103 @@ const validateField = (field) => {
   }
 }
 
+// 生成 UUID（简单版本）
+const generateUUID = () => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0
+    const v = c === 'x' ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
+}
+
+// 处理头像文件选择
+const handleAvatarChange = async (event) => {
+  const file = event.target.files?.[0]
+  if (!file) return
+
+  // 验证文件类型
+  if (!file.type.startsWith('image/')) {
+    avatarError.value = '请选择图片文件'
+    return
+  }
+
+  // 验证文件大小（限制为 5MB）
+  const maxSize = 5 * 1024 * 1024 // 5MB
+  if (file.size > maxSize) {
+    avatarError.value = '图片大小不能超过 5MB'
+    return
+  }
+
+  avatarError.value = ''
+  avatarFile.value = file
+
+  // 创建预览
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    avatarPreview.value = e.target.result
+  }
+  reader.readAsDataURL(file)
+
+  // 上传文件到 Minio 临时目录
+  await uploadAvatar(file)
+}
+
+// 上传头像到 Minio 临时目录
+const uploadAvatar = async (file) => {
+  isUploadingAvatar.value = true
+  avatarError.value = ''
+
+  try {
+    // 生成临时 object_key，使用 UUID 作为临时标识
+    // 注册成功后，后端会将文件从临时目录移动到 avatars/{user_id}/{filename}
+    const fileExtension = file.name.split('.').pop() || 'jpg'
+    const uuid = generateUUID()
+    const objectKey = `avatars/temp/${uuid}/avatar.${fileExtension}`
+
+    const response = await uploadFile(file, objectKey)
+    
+    // 保存 object_key，注册时传递给后端
+    // 优先使用后端返回的 object_key，否则使用我们生成的
+    if (response.object_key) {
+      avatarObjectKey.value = response.object_key
+    } else {
+      avatarObjectKey.value = objectKey
+    }
+    
+    // 如果后端返回了 URL，保存用于预览；注册时使用 object_key
+    if (response.url) {
+      form.avatarUrl = response.url
+    } else {
+      // 如果没有返回 URL，使用 object_key
+      form.avatarUrl = avatarObjectKey.value
+    }
+  } catch (err) {
+    // 显示详细的错误信息
+    console.error('头像上传失败:', err)
+    const errorMessage = err.message || err.details?.message || '头像上传失败，请稍后再试'
+    avatarError.value = errorMessage
+    avatarPreview.value = ''
+    avatarFile.value = null
+    if (avatarInput.value) {
+      avatarInput.value.value = ''
+    }
+  } finally {
+    isUploadingAvatar.value = false
+  }
+}
+
+// 移除头像
+const removeAvatar = () => {
+  avatarPreview.value = ''
+  avatarFile.value = null
+  avatarObjectKey.value = ''
+  form.avatarUrl = ''
+  avatarError.value = ''
+  if (avatarInput.value) {
+    avatarInput.value.value = ''
+  }
+}
+
 const handleSubmit = async () => {
   const { isValid, errors: fieldErrors, message } = validateRegisterForm(form)
   errors.username = fieldErrors.username
@@ -157,7 +327,14 @@ const handleSubmit = async () => {
   }
 
   try {
-    await authStore.handleRegister(form)
+    // 如果有上传的头像，使用 object_key（后端会将文件从临时目录移动到用户目录）
+    // 如果没有上传头像，form.avatarUrl 会是空字符串
+    const finalAvatarUrl = avatarObjectKey.value || form.avatarUrl
+
+    await authStore.handleRegister({
+      ...form,
+      avatarUrl: finalAvatarUrl
+    })
     router.push('/')
   } catch (err) {
     errors.general = err.message || '注册失败，请稍后再试'
@@ -242,6 +419,139 @@ const handleSubmit = async () => {
   font-weight: 400;
   color: #9ca3af;
   margin-left: 4px;
+}
+
+.gender-options {
+  display: flex;
+  gap: 20px;
+  margin-top: 4px;
+}
+
+.gender-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 15px;
+  color: #1f2937;
+  user-select: none;
+}
+
+.gender-option input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #3b82f6;
+}
+
+.gender-option span {
+  transition: color 0.2s ease;
+}
+
+.gender-option:hover span {
+  color: #3b82f6;
+}
+
+.avatar-upload-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.avatar-preview {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.remove-avatar-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+}
+
+.remove-avatar-btn:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.avatar-upload-placeholder {
+  width: 120px;
+  height: 120px;
+  border: 2px dashed #d1d5db;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #9ca3af;
+  background: #f9fafb;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.avatar-upload-placeholder:hover {
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+.avatar-upload-placeholder svg {
+  width: 32px;
+  height: 32px;
+}
+
+.avatar-upload-placeholder span {
+  font-size: 13px;
+}
+
+.upload-btn {
+  width: fit-content;
+  padding: 8px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  color: #374151;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.upload-btn:hover:not(:disabled) {
+  border-color: #3b82f6;
+  color: #3b82f6;
+  background: #eff6ff;
+}
+
+.upload-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.avatar-error {
+  font-size: 13px;
+  color: #ef4444;
 }
 
 .form-error {

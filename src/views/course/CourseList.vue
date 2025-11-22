@@ -135,7 +135,7 @@ export default {
   methods: {
     getCourseImageUrl(imageName) {
       if (!imageName) return ''
-      return `${this.minioBaseUrl}/${this.bucketName}/coursedemo/${imageName}`
+      return `${this.minioBaseUrl}/${this.bucketName}/courses/default/${imageName}`
     },
     getStatusText(status) {
       const map = {
