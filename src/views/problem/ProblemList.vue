@@ -111,70 +111,6 @@ export default {
           difficulty: 'medium',
           submissions: 8920,
           passRate: 45.2
-        },
-        {
-          id: 1003,
-          title: '无重复字符的最长子串',
-          tags: ['字符串', '滑动窗口'],
-          difficulty: 'medium',
-          submissions: 15620,
-          passRate: 52.8
-        },
-        {
-          id: 1004,
-          title: '寻找两个正序数组的中位数',
-          tags: ['数组', '二分查找'],
-          difficulty: 'hard',
-          submissions: 5230,
-          passRate: 32.1
-        },
-        {
-          id: 1005,
-          title: '最长回文子串',
-          tags: ['字符串', '动态规划'],
-          difficulty: 'medium',
-          submissions: 11240,
-          passRate: 38.7
-        },
-        {
-          id: 1006,
-          title: 'Z字形变换',
-          tags: ['字符串'],
-          difficulty: 'medium',
-          submissions: 7890,
-          passRate: 42.3
-        },
-        {
-          id: 1007,
-          title: '整数反转',
-          tags: ['数学'],
-          difficulty: 'easy',
-          submissions: 18920,
-          passRate: 71.2
-        },
-        {
-          id: 1008,
-          title: '字符串转换整数',
-          tags: ['字符串', '状态机'],
-          difficulty: 'medium',
-          submissions: 6540,
-          passRate: 18.9
-        },
-        {
-          id: 1009,
-          title: '回文数',
-          tags: ['数学'],
-          difficulty: 'easy',
-          submissions: 22100,
-          passRate: 75.6
-        },
-        {
-          id: 1010,
-          title: '正则表达式匹配',
-          tags: ['字符串', '动态规划'],
-          difficulty: 'hard',
-          submissions: 4320,
-          passRate: 28.4
         }
       ]
     }
@@ -225,8 +161,7 @@ export default {
       }
     },
     goToProblem(id) {
-      // 后续可以跳转到题目详情页
-      console.log('跳转到题目:', id)
+      this.$router.push(`/problems/${id}`)
     }
   }
 }
