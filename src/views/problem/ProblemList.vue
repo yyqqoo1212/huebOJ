@@ -438,7 +438,7 @@ export default {
   display: grid;
   grid-template-columns: 80px 1fr 200px 120px 120px 150px;
   gap: 20px;
-  padding: 16px 24px;
+  padding: 10px 24px;
   background-color: #fafafa;
   border-bottom: 2px solid #e8e8e8;
   font-weight: 600;
@@ -450,7 +450,7 @@ export default {
   display: grid;
   grid-template-columns: 80px 1fr 200px 120px 120px 150px;
   gap: 20px;
-  padding: 20px 24px;
+  padding: 12px 24px;
   border-bottom: 1px solid #f0f0f0;
   cursor: pointer;
   transition: all 0.2s ease;

@@ -42,7 +42,7 @@
           <div class="content-section">
             <h2 class="section-title">题目描述</h2>
             <div class="section-content">
-              <p v-if="problem.content">{{ problem.content }}</p>
+              <div v-if="problem.content" v-html="renderContent(problem.content)"></div>
               <p v-else class="placeholder-text">题目描述内容待完善...</p>
             </div>
           </div>
@@ -50,7 +50,7 @@
           <div class="content-section">
             <h2 class="section-title">输入描述</h2>
             <div class="section-content">
-              <p v-if="problem.input_description">{{ problem.input_description }}</p>
+              <div v-if="problem.input_description" v-html="renderContent(problem.input_description)"></div>
               <p v-else class="placeholder-text">输入描述内容待完善...</p>
             </div>
           </div>
@@ -58,39 +58,50 @@
           <div class="content-section">
             <h2 class="section-title">输出描述</h2>
             <div class="section-content">
-              <p v-if="problem.output_description">{{ problem.output_description }}</p>
+              <div v-if="problem.output_description" v-html="renderContent(problem.output_description)"></div>
               <p v-else class="placeholder-text">输出描述内容待完善...</p>
             </div>
           </div>
 
-          <div class="content-section" v-if="problem.input_demo || problem.output_demo">
+          <div class="content-section" v-if="sampleList.length > 0">
             <h2 class="section-title">样例</h2>
             <div class="sample-container">
-              <div class="sample-item" v-if="problem.input_demo">
-                <div class="sample-header">
-                  <h3 class="sample-label">输入：</h3>
-                  <button 
-                    class="btn-copy" 
-                    @click="copyToClipboard(problem.input_demo)"
-                    title="复制输入样例"
-                  >
-                    📋 复制
-                  </button>
+              <div 
+                v-for="(sample, index) in sampleList" 
+                :key="index"
+                class="sample-group"
+              >
+                <div class="sample-group-header">
+                  <h3 class="sample-group-title">样例 {{ index + 1 }}</h3>
                 </div>
-                <pre class="sample-code">{{ problem.input_demo }}</pre>
-              </div>
-              <div class="sample-item" v-if="problem.output_demo">
-                <div class="sample-header">
-                  <h3 class="sample-label">输出：</h3>
-                  <button 
-                    class="btn-copy" 
-                    @click="copyToClipboard(problem.output_demo)"
-                    title="复制输出样例"
-                  >
-                    📋 复制
-                  </button>
+                <div class="sample-group-content">
+                  <div class="sample-item" v-if="sample.input">
+                    <div class="sample-header">
+                      <h4 class="sample-label">输入：</h4>
+                      <button 
+                        class="btn-copy" 
+                        @click="copyToClipboard(sample.input)"
+                        title="复制输入样例"
+                      >
+                        📋 复制
+                      </button>
+                    </div>
+                    <pre class="sample-code">{{ sample.input }}</pre>
+                  </div>
+                  <div class="sample-item" v-if="sample.output">
+                    <div class="sample-header">
+                      <h4 class="sample-label">输出：</h4>
+                      <button 
+                        class="btn-copy" 
+                        @click="copyToClipboard(sample.output)"
+                        title="复制输出样例"
+                      >
+                        📋 复制
+                      </button>
+                    </div>
+                    <pre class="sample-code">{{ sample.output }}</pre>
+                  </div>
                 </div>
-                <pre class="sample-code">{{ problem.output_demo }}</pre>
               </div>
             </div>
           </div>
@@ -98,7 +109,7 @@
           <div class="content-section" v-if="problem.hint">
             <h2 class="section-title">提示</h2>
             <div class="section-content">
-              <p>{{ problem.hint }}</p>
+              <div v-html="renderContent(problem.hint)"></div>
             </div>
           </div>
         </div>
@@ -108,7 +119,7 @@
       <div class="code-section">
         <div class="code-header">
           <div class="language-selector">
-            <label for="language">编程语言：</label>
+            <label for="language">语言：</label>
             <select id="language" v-model="selectedLanguage" class="language-select">
               <option value="cpp">C++</option>
               <option value="java">Java</option>
@@ -119,7 +130,6 @@
           <div class="code-actions">
             <div class="editor-settings">
               <div class="font-size-selector">
-                <label for="fontSize">字号：</label>
                 <select id="fontSize" v-model="fontSize" @change="updateFontSize" class="font-size-select">
                   <option value="12">12px</option>
                   <option value="14">14px</option>
@@ -136,13 +146,71 @@
                 {{ isDarkTheme ? '☀️' : '🌙' }}
               </button>
             </div>
-            <button class="btn-reset" @click="resetCode">重置代码</button>
-            <button class="btn-submit" @click="submitCode">提交代码</button>
+            <button class="btn-reset" @click="resetCode">⟲</button>
+            <button 
+              class="btn-test" 
+              :class="{ active: showTestPanel }"
+              @click="toggleTestPanel"
+            >
+              {{ showTestPanel ? '收起自测' : '在线自测' }}
+            </button>
+            <button class="btn-submit" @click="submitCode">
+              提交代码
+            </button>
           </div>
         </div>
         <div class="editor-container">
           <div ref="editorContainer" class="codemirror-editor"></div>
         </div>
+        
+        <!-- 在线自测面板 -->
+        <transition name="slide-up">
+          <div v-if="showTestPanel" class="test-panel">
+            <div class="test-panel-content">
+            <div class="test-input-section">
+              <div class="test-section-header">
+                <label class="test-section-label">测试用例输入</label>
+                <div class="test-section-actions">
+                  <button 
+                    v-for="(sample, index) in sampleList" 
+                    :key="index"
+                    class="btn-fill-sample"
+                    @click="fillTestInput(sample.input)"
+                    :title="`填充样例 ${index + 1} 的输入`"
+                  >
+                    样例 {{ index + 1 }}
+                  </button>
+                  <button class="btn-clear" @click="testInput = ''">清空</button>
+                </div>
+              </div>
+              <textarea 
+                v-model="testInput" 
+                class="test-input-area"
+                placeholder="请输入测试用例，或点击上方按钮填充样例输入..."
+                rows="6"
+              ></textarea>
+            </div>
+            <div class="test-output-section">
+              <div class="test-section-header">
+                <label class="test-section-label">运行结果</label>
+                <button 
+                  class="btn-run-test" 
+                  @click="runTest"
+                  :disabled="!testInput.trim()"
+                >
+                  ▶ 运行自测
+                </button>
+              </div>
+              <div class="test-output-area">
+                <pre v-if="testOutput" class="test-output-content">{{ testOutput }}</pre>
+                <div v-else class="test-output-placeholder">
+                  运行结果将显示在这里...
+                </div>
+              </div>
+            </div>
+          </div>
+          </div>
+        </transition>
       </div>
     </div>
   </div>
@@ -159,6 +227,9 @@ import { java } from '@codemirror/lang-java'
 import { python } from '@codemirror/lang-python'
 import { javascript } from '@codemirror/lang-javascript'
 import { getProblemDetail } from '@/api/problem'
+import MarkdownIt from 'markdown-it'
+import katex from 'katex'
+import 'katex/dist/katex.min.css'
 
 export default {
   name: 'ProblemDetail',
@@ -181,6 +252,7 @@ export default {
         create_time: ''
       },
       loading: false,
+      sampleList: [], // 解析后的样例列表
       selectedLanguage: 'cpp',
       fontSize: 14,
       isDarkTheme: true,
@@ -190,13 +262,25 @@ export default {
       themeCompartment: null,
       resizeHandler: null,
       resizeTimer: null,
+      showTestPanel: false, // 是否显示自测面板
+      testInput: '', // 测试用例输入
+      testOutput: '', // 运行结果输出
       defaultCode: {
         cpp: ``,
         java: ``,
         python: ``,
         javascript: ``
-      }
+      },
+      md: null // Markdown 渲染器实例
     }
+  },
+  created() {
+    // 初始化 Markdown 渲染器
+    this.md = new MarkdownIt({
+      html: true, // 允许 HTML 标签
+      linkify: true, // 自动识别链接
+      breaks: true // 将换行符转换为 <br>
+    })
   },
   mounted() {
     this.loadProblem()
@@ -225,6 +309,106 @@ export default {
     }
   },
   methods: {
+    // 渲染 Markdown 和 LaTeX 内容
+    renderContent(text) {
+      if (!text) return ''
+      
+      // 先处理换行符（将 \n 转换为实际的换行）
+      let processed = text.replace(/\\n/g, '\n')
+      
+      // 保留行首空格：使用占位符临时标记行首空格
+      const spacePlaceholders = new Map()
+      let spaceIndex = 0
+      processed = processed.split('\n').map(line => {
+        // 匹配行首的空格
+        const match = line.match(/^(\s+)/)
+        if (match) {
+          const spaces = match[1]
+          const placeholder = `<span data-space-placeholder="${spaceIndex}"></span>`
+          spacePlaceholders.set(spaceIndex, spaces.replace(/ /g, '&nbsp;'))
+          spaceIndex++
+          return line.replace(/^(\s+)/, placeholder)
+        }
+        return line
+      }).join('\n')
+      
+      // 使用占位符临时替换 LaTeX 公式，避免与 Markdown 处理冲突
+      // 使用 span 标签作为占位符，这样 Markdown 不会处理它
+      const placeholders = new Map()
+      let placeholderIndex = 0
+      
+      // 处理块级公式：$$...$$ 或 \[...\]
+      processed = processed.replace(/\$\$([\s\S]*?)\$\$/g, (match, formula) => {
+        try {
+          const rendered = katex.renderToString(formula.trim(), { displayMode: true, throwOnError: false })
+          const placeholder = `<span data-latex-placeholder="${placeholderIndex}"></span>`
+          placeholders.set(placeholderIndex, rendered)
+          placeholderIndex++
+          return placeholder
+        } catch (e) {
+          return match
+        }
+      })
+      processed = processed.replace(/\\\[([\s\S]*?)\\\]/g, (match, formula) => {
+        try {
+          const rendered = katex.renderToString(formula.trim(), { displayMode: true, throwOnError: false })
+          const placeholder = `<span data-latex-placeholder="${placeholderIndex}"></span>`
+          placeholders.set(placeholderIndex, rendered)
+          placeholderIndex++
+          return placeholder
+        } catch (e) {
+          return match
+        }
+      })
+      
+      // 处理行内公式：$...$ 或 \(...\)
+      // 使用更严格的匹配，要求公式中包含至少一个字母或常见数学符号
+      processed = processed.replace(/\$([^$\n]+?)\$/g, (match, formula) => {
+        // 检查是否包含数学符号或字母（避免匹配普通文本中的 $）
+        if (/[a-zA-Zα-ωΑ-Ω_^\\{}[\]]/.test(formula)) {
+          try {
+            const rendered = katex.renderToString(formula.trim(), { displayMode: false, throwOnError: false })
+            const placeholder = `<span data-latex-placeholder="${placeholderIndex}"></span>`
+            placeholders.set(placeholderIndex, rendered)
+            placeholderIndex++
+            return placeholder
+          } catch (e) {
+            return match
+          }
+        }
+        return match
+      })
+      processed = processed.replace(/\\\(([^\\]+?)\\\)/g, (match, formula) => {
+        try {
+          const rendered = katex.renderToString(formula.trim(), { displayMode: false, throwOnError: false })
+          const placeholder = `<span data-latex-placeholder="${placeholderIndex}"></span>`
+          placeholders.set(placeholderIndex, rendered)
+          placeholderIndex++
+          return placeholder
+        } catch (e) {
+          return match
+        }
+      })
+      
+      // 使用 Markdown 渲染
+      let html = this.md.render(processed)
+      
+      // 将占位符替换回渲染后的 LaTeX（按索引从大到小替换，避免索引冲突）
+      const sortedIndices = Array.from(placeholders.keys()).sort((a, b) => b - a)
+      sortedIndices.forEach(index => {
+        const rendered = placeholders.get(index)
+        const placeholderRegex = new RegExp(`<span data-latex-placeholder="${index}"></span>`, 'g')
+        html = html.replace(placeholderRegex, rendered)
+      })
+      
+      // 将行首空格占位符替换为 &nbsp;
+      spacePlaceholders.forEach((spaces, index) => {
+        const placeholderRegex = new RegExp(`<span data-space-placeholder="${index}"></span>`, 'g')
+        html = html.replace(placeholderRegex, spaces)
+      })
+      
+      return html
+    },
     async loadProblem() {
       const problemId = this.$route.params.id
       if (!problemId) {
@@ -254,6 +438,13 @@ export default {
             hint: data.hint || '',
             create_time: data.create_time || ''
           }
+          
+          // 解析样例数据（优先使用后端解析的数组，如果没有则前端解析）
+          if (data.samples && Array.isArray(data.samples) && data.samples.length > 0) {
+            this.sampleList = data.samples
+          } else {
+            this.parseSamples(data.input_demo, data.output_demo)
+          }
         } else {
           this.$message?.error(response.message || '获取题目详情失败')
           this.$router.push('/problems')
@@ -264,6 +455,30 @@ export default {
         this.$router.push('/problems')
       } finally {
         this.loading = false
+      }
+    },
+    parseSamples(inputDemo, outputDemo) {
+      // 解析样例数据，支持多组样例（用 | 分隔）
+      this.sampleList = []
+      
+      if (!inputDemo && !outputDemo) {
+        return
+      }
+      
+      // 分割输入样例
+      const inputList = inputDemo ? inputDemo.split('|').map(s => s.trim()).filter(s => s) : []
+      // 分割输出样例
+      const outputList = outputDemo ? outputDemo.split('|').map(s => s.trim()).filter(s => s) : []
+      
+      // 确定样例组数（取输入和输出的最大长度）
+      const maxLength = Math.max(inputList.length, outputList.length)
+      
+      // 构建样例列表
+      for (let i = 0; i < maxLength; i++) {
+        this.sampleList.push({
+          input: inputList[i] || '',
+          output: outputList[i] || ''
+        })
       }
     },
     copyToClipboard(text) {
@@ -331,6 +546,7 @@ export default {
           rectangularSelection(),
           crosshairCursor(),
           highlightActiveLine(),
+          EditorView.lineWrapping, // 启用自动换行
           keymap.of([
             ...defaultKeymap,
             ...historyKeymap,
@@ -548,6 +764,47 @@ export default {
         })
       }
     },
+    toggleTestPanel() {
+      this.showTestPanel = !this.showTestPanel
+      if (this.showTestPanel) {
+        // 展开面板时，如果没有输入且有待填充的样例，自动填充第一个样例
+        if (!this.testInput && this.sampleList.length > 0 && this.sampleList[0].input) {
+          this.testInput = this.sampleList[0].input
+        }
+      }
+    },
+    fillTestInput(input) {
+      this.testInput = input || ''
+    },
+    async runTest() {
+      if (!this.testInput.trim()) {
+        this.$message?.warning('请输入测试用例')
+        return
+      }
+
+      if (!this.editor) {
+        this.$message?.warning('代码编辑器未初始化')
+        return
+      }
+
+      const code = this.editor.state.doc.toString()
+      if (!code.trim()) {
+        this.$message?.warning('代码不能为空')
+        return
+      }
+
+      // TODO: 调用判题机运行代码
+      // 目前暂时显示提示信息
+      this.testOutput = '判题机功能待开发完成后完善\n\n当前测试用例：\n' + this.testInput
+      
+      // 模拟运行（实际应该调用后端判题接口）
+      console.log('运行自测:', {
+        problemId: this.problem.id,
+        language: this.selectedLanguage,
+        code: code,
+        input: this.testInput
+      })
+    },
     async submitCode() {
       if (!this.editor) {
         return
@@ -555,7 +812,7 @@ export default {
 
       const code = this.editor.state.doc.toString()
       if (!code.trim()) {
-        alert('代码不能为空')
+        this.$message?.warning('代码不能为空')
         return
       }
 
@@ -567,7 +824,7 @@ export default {
       })
 
       // 模拟提交
-      alert('代码提交功能待后端开发完成后完善')
+      this.$message?.info('代码提交功能待后端开发完成后完善')
     },
     getDifficultyText(difficulty) {
       const map = {
@@ -675,7 +932,7 @@ export default {
 }
 
 .meta-label {
-  color: #666666;
+  color: #333333;
   margin-right: 4px;
 }
 
@@ -704,13 +961,158 @@ export default {
 }
 
 .section-content {
-  color: #555555;
+  color: #333333;
   line-height: 1.8;
   font-size: 15px;
 }
 
 .section-content p {
   margin: 0 0 12px 0;
+}
+
+/* Markdown 样式 */
+.section-content :deep(h1),
+.section-content :deep(h2),
+.section-content :deep(h3),
+.section-content :deep(h4),
+.section-content :deep(h5),
+.section-content :deep(h6) {
+  margin: 16px 0 12px 0;
+  font-weight: 600;
+  color: #333333;
+  line-height: 1.4;
+}
+
+.section-content :deep(h1) {
+  font-size: 24px;
+  border-bottom: 2px solid #e8e8e8;
+  padding-bottom: 8px;
+}
+
+.section-content :deep(h2) {
+  font-size: 20px;
+  border-bottom: 1px solid #e8e8e8;
+  padding-bottom: 6px;
+}
+
+.section-content :deep(h3) {
+  font-size: 18px;
+}
+
+.section-content :deep(h4) {
+  font-size: 16px;
+}
+
+.section-content :deep(h5),
+.section-content :deep(h6) {
+  font-size: 15px;
+}
+
+.section-content :deep(p) {
+  margin: 0 0 12px 0;
+  line-height: 1.8;
+}
+
+.section-content :deep(ul),
+.section-content :deep(ol) {
+  margin: 12px 0;
+  padding-left: 24px;
+}
+
+.section-content :deep(li) {
+  margin: 6px 0;
+  line-height: 1.8;
+}
+
+.section-content :deep(blockquote) {
+  margin: 12px 0;
+  padding: 12px 16px;
+  border-left: 4px solid #1890ff;
+  background-color: #f0f7ff;
+  color: #111111;
+}
+
+.section-content :deep(code) {
+  padding: 2px 6px;
+  background-color: #f5f5f5;
+  border: 1px solid #e8e8e8;
+  border-radius: 3px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 14px;
+  color: #e83e8c;
+}
+
+.section-content :deep(pre) {
+  margin: 12px 0;
+  padding: 12px;
+  background-color: #f5f5f5;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+.section-content :deep(pre code) {
+  padding: 0;
+  background-color: transparent;
+  border: none;
+  color: #333333;
+  font-size: 14px;
+}
+
+.section-content :deep(a) {
+  color: #1890ff;
+  text-decoration: none;
+}
+
+.section-content :deep(a:hover) {
+  text-decoration: underline;
+}
+
+.section-content :deep(table) {
+  width: 100%;
+  margin: 12px 0;
+  border-collapse: collapse;
+}
+
+.section-content :deep(th),
+.section-content :deep(td) {
+  padding: 8px 12px;
+  border: 1px solid #e8e8e8;
+  text-align: left;
+}
+
+.section-content :deep(th) {
+  background-color: #fafafa;
+  font-weight: 600;
+}
+
+.section-content :deep(hr) {
+  margin: 16px 0;
+  border: none;
+  border-top: 1px solid #e8e8e8;
+}
+
+.section-content :deep(img) {
+  max-width: 100%;
+  height: auto;
+  margin: 12px 0;
+  border-radius: 4px;
+}
+
+/* LaTeX 数学公式样式 */
+.section-content :deep(.katex) {
+  font-size: 1.1em;
+}
+
+.section-content :deep(.katex-display) {
+  margin: 16px 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.section-content :deep(.katex-display > .katex) {
+  display: inline-block;
+  text-align: left;
 }
 
 .placeholder-text {
@@ -721,11 +1123,37 @@ export default {
 .sample-container {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 24px;
+}
+
+.sample-group {
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 16px;
+  background-color: #fafafa;
+}
+
+.sample-group-header {
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.sample-group-title {
+  font-size: 16px;
+  color: #333333;
+  margin: 0;
+  font-weight: 600;
+}
+
+.sample-group-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .sample-item {
-  margin-bottom: 8px;
+  margin-bottom: 0;
 }
 
 .sample-header {
@@ -736,7 +1164,7 @@ export default {
 }
 
 .sample-label {
-  font-size: 15px;
+  font-size: 14px;
   color: #333333;
   margin: 0;
   font-weight: 500;
@@ -794,7 +1222,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
+  padding: 10px 16px;
   border-bottom: 1px solid #f0f0f0;
   background-color: #fafafa;
 }
@@ -802,20 +1230,20 @@ export default {
 .language-selector {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .language-selector label {
-  font-size: 14px;
+  font-size: 13px;
   color: #666666;
   font-weight: 500;
 }
 
 .language-select {
-  padding: 6px 12px;
+  padding: 4px 10px;
   border: 1px solid #d9d9d9;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 13px;
   color: #333333;
   background-color: #ffffff;
   cursor: pointer;
@@ -831,13 +1259,13 @@ export default {
 .code-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .editor-settings {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .font-size-selector {
@@ -871,20 +1299,20 @@ export default {
 }
 
 .btn-theme-toggle {
-  padding: 6px 12px;
+  padding: 4px 10px;
   border: 1px solid #d9d9d9;
   border-radius: 4px;
   background-color: #ffffff;
   color: #333333;
-  font-size: 18px;
+  font-size: 16px;
   cursor: pointer;
   transition: all 0.3s ease;
   outline: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 36px;
-  height: 32px;
+  min-width: 32px;
+  height: 28px;
 }
 
 .btn-theme-toggle:hover {
@@ -893,11 +1321,12 @@ export default {
 }
 
 .btn-reset,
+.btn-test,
 .btn-submit {
-  padding: 8px 20px;
+  padding: 6px 16px;
   border: none;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -915,13 +1344,43 @@ export default {
   color: #1890ff;
 }
 
-.btn-submit {
-  background-color: #1890ff;
+.btn-test {
+  background-color: #52c41a;
   color: #ffffff;
+  border: 1px solid #52c41a;
+}
+
+.btn-test:hover {
+  background-color: #73d13d;
+  border-color: #73d13d;
+}
+
+.btn-test.active {
+  background-color: #faad14;
+  border-color: #faad14;
+}
+
+.btn-test.active:hover {
+  background-color: #ffc53d;
+  border-color: #ffc53d;
+}
+
+.btn-submit {
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+  color: #ffffff;
+  border: 1px solid #1890ff;
+  box-shadow: 0 2px 6px rgba(24, 144, 255, 0.3);
 }
 
 .btn-submit:hover {
-  background-color: #40a9ff;
+  background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%);
+  border-color: #40a9ff;
+  box-shadow: 0 4px 10px rgba(24, 144, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-submit:active {
+  transform: translateY(0);
 }
 
 .editor-container {
@@ -930,6 +1389,221 @@ export default {
   display: flex;
   flex-direction: column;
   position: relative;
+}
+
+/* 向上弹出过渡动画 */
+.slide-up-enter-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide-up-leave-active {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide-up-enter-from {
+  opacity: 0;
+  transform: translateY(100%);
+}
+
+.slide-up-enter-to {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.slide-up-leave-from {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.slide-up-leave-to {
+  opacity: 0;
+  transform: translateY(100%);
+}
+
+.test-panel {
+  border-top: 2px solid #e8e8e8;
+  background-color: #ffffff;
+  max-height: 400px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.test-panel-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 16px 20px;
+  overflow: hidden;
+  flex: 1;
+  min-height: 0;
+}
+
+.test-input-section,
+.test-output-section {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.test-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.test-section-label {
+  font-size: 14px;
+  color: #333333;
+  font-weight: 500;
+}
+
+.test-section-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.btn-fill-sample {
+  padding: 4px 10px;
+  border: 1px solid #1890ff;
+  border-radius: 4px;
+  background-color: #ffffff;
+  color: #1890ff;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.btn-fill-sample:hover {
+  background-color: #e6f7ff;
+  border-color: #40a9ff;
+}
+
+.btn-clear {
+  padding: 4px 10px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  background-color: #ffffff;
+  color: #666666;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.btn-clear:hover {
+  border-color: #ff4d4f;
+  color: #ff4d4f;
+  background-color: #fff1f0;
+}
+
+.test-input-area {
+  flex: 1;
+  padding: 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  resize: none;
+  outline: none;
+  transition: border-color 0.3s ease;
+  min-height: 150px;
+}
+
+.test-input-area:focus {
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+.test-output-area {
+  flex: 1;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background-color: #fafafa;
+  padding: 12px;
+  overflow-y: auto;
+  min-height: 150px;
+  max-height: 300px;
+}
+
+.test-output-content {
+  margin: 0;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #333333;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.test-output-placeholder {
+  color: #999999;
+  font-style: italic;
+  font-size: 14px;
+  text-align: center;
+  padding: 20px 0;
+}
+
+.btn-run-test {
+  padding: 6px 16px;
+  border: none;
+  border-radius: 6px;
+  background-color: #1890ff;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.btn-run-test:hover:not(:disabled) {
+  background-color: #40a9ff;
+}
+
+.btn-run-test:disabled {
+  background-color: #d9d9d9;
+  color: #999999;
+  cursor: not-allowed;
+}
+
+.submit-button-fixed {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  z-index: 1000;
+}
+
+.btn-submit-fixed {
+  padding: 14px 28px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  outline: none;
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-submit-fixed:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(24, 144, 255, 0.5);
+  background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%);
+}
+
+.btn-submit-fixed:active {
+  transform: translateY(0);
 }
 
 .codemirror-editor {
@@ -953,7 +1627,8 @@ export default {
 
 .codemirror-editor :deep(.cm-scroller) {
   flex: 1;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   min-height: 0;
 }
 
@@ -1060,8 +1735,24 @@ export default {
   }
 
   .btn-reset,
+  .btn-test {
+    flex: 1;
+  }
+
+  .test-panel-content {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .code-actions {
+    flex-wrap: wrap;
+  }
+
+  .btn-reset,
+  .btn-test,
   .btn-submit {
     flex: 1;
+    min-width: 100px;
   }
 }
 </style>

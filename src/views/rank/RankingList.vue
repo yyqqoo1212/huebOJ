@@ -2,8 +2,7 @@
   <div class="ranking-list">
     <div class="ranking-list-container">
       <div class="page-header">
-        <h1>🏆 排行榜</h1>
-        <p class="subtitle">看看谁是最强王者</p>
+        <h1>排行榜</h1>
       </div>
 
       <div class="ranking-tabs">
@@ -43,7 +42,6 @@
                    <div class="user-details">
                      <span class="username">{{ user.name }}</span>
                      <span class="user-id">ID: {{ user.id }}</span>
-                     <span class="user-slogan">{{ user.slogan }}</span>
                    </div>
                  </div>
                </div>
@@ -86,9 +84,9 @@ export default {
     return {
       activeTab: 'solved',
       tabs: [
-        { key: 'solved', label: '📚 做题大王' },
-        { key: 'rating', label: '⭐ 评级排行榜' },
-        { key: 'contest', label: '🏅 比赛排行榜' }
+        { key: 'solved', label: '做题量' },
+        { key: 'rating', label: '评级' },
+        { key: 'contest', label: '比赛' }
       ],
        solvedRanking: [
          {
@@ -170,43 +168,33 @@ export default {
 }
 
 .page-header {
-  text-align: center;
-  margin-bottom: 40px;
+  margin-bottom: 30px;
 }
 
 .page-header h1 {
-  font-size: 42px;
+  font-size: 32px;
   color: #333333;
-  margin-bottom: 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.subtitle {
-  font-size: 18px;
-  color: #666666;
+  margin-bottom: 8px;
 }
 
 .ranking-tabs {
   display: flex;
   gap: 12px;
-  margin-bottom: 30px;
+  margin-bottom: 20px;
   background-color: #ffffff;
   padding: 8px;
-  border-radius: 12px;
+  border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .tab-btn {
   flex: 1;
-  padding: 12px 24px;
-  border: none;
-  border-radius: 8px;
-  background-color: transparent;
-  color: #666666;
-  font-size: 16px;
+  padding: 6px 16px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background-color: #ffffff;
+  color: #333333;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -214,97 +202,52 @@ export default {
 }
 
 .tab-btn:hover {
-  background-color: #f0f0f0;
-  color: #333333;
+  border-color: #1890ff;
+  color: #1890ff;
 }
 
 .tab-btn.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-color: #1890ff;
+  border-color: #1890ff;
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
 .ranking-content {
   background-color: #ffffff;
-  border-radius: 12px;
+  border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   overflow: hidden;
 }
 
 .ranking-table {
-  padding: 20px;
+  padding: 0;
 }
 
 .table-header {
   display: grid;
   grid-template-columns: 100px 1fr 150px 200px;
   gap: 20px;
-  padding: 16px 20px;
+  padding: 10px 24px;
   background-color: #fafafa;
   border-bottom: 2px solid #e8e8e8;
   font-weight: 600;
   font-size: 14px;
   color: #666666;
-  border-radius: 8px 8px 0 0;
 }
 
 .table-row {
   display: grid;
   grid-template-columns: 100px 1fr 150px 200px;
   gap: 20px;
-  padding: 20px;
+  padding: 12px 24px;
   border-bottom: 1px solid #f0f0f0;
-  transition: all 0.3s ease;
-  animation: slideIn 0.5s ease forwards;
-  opacity: 0;
-}
-
-.table-row:nth-child(1) {
-  animation-delay: 0.1s;
-}
-
-.table-row:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.table-row:nth-child(3) {
-  animation-delay: 0.3s;
-}
-
-.table-row:nth-child(n+4) {
-  animation-delay: 0.4s;
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+  transition: all 0.2s ease;
 }
 
 .table-row:hover {
   background-color: #f8f9fa;
   transform: translateX(4px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.table-row.rank-1 {
-  background: linear-gradient(135deg, #fff9e6 0%, #fff5d6 100%);
-  border-left: 4px solid #ffd700;
-}
-
-.table-row.rank-2 {
-  background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
-  border-left: 4px solid #c0c0c0;
-}
-
-.table-row.rank-3 {
-  background: linear-gradient(135deg, #fff4e6 0%, #ffe8d6 100%);
-  border-left: 4px solid #cd7f32;
 }
 
 .table-row:last-child {
@@ -315,26 +258,17 @@ export default {
   display: flex;
   align-items: center;
   font-weight: 600;
-  font-size: 18px;
+  font-size: 14px;
+  color: #333333;
 }
 
 .medal {
-  font-size: 32px;
-  animation: bounce 1s ease infinite;
-}
-
-@keyframes bounce {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-5px);
-  }
+  font-size: 20px;
 }
 
 .rank-number {
   color: #666666;
-  font-size: 20px;
+  font-size: 14px;
 }
 
 .col-user {
@@ -349,17 +283,16 @@ export default {
 }
 
 .avatar {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-color: #1890ff;
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 600;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
 }
 
 .user-details {
@@ -370,26 +303,14 @@ export default {
 }
 
 .username {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 500;
   color: #333333;
 }
 
 .user-id {
   font-size: 12px;
   color: #999999;
-}
-
-.user-slogan {
-  font-size: 13px;
-  color: #666666;
-  font-style: italic;
-  margin-top: 4px;
-  padding: 4px 8px;
-  background-color: #f8f9fa;
-  border-radius: 4px;
-  border-left: 3px solid #667eea;
-  line-height: 1.4;
 }
 
 .col-solved {
@@ -399,9 +320,9 @@ export default {
 }
 
 .solved-count {
-  font-size: 24px;
-  font-weight: 700;
-  color: #667eea;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333333;
 }
 
 .solved-label {
@@ -416,39 +337,17 @@ export default {
 
 .progress-bar {
   width: 100%;
-  height: 12px;
+  height: 8px;
   background-color: #f0f0f0;
-  border-radius: 6px;
+  border-radius: 4px;
   overflow: hidden;
-  position: relative;
 }
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-  border-radius: 6px;
-  transition: width 0.8s ease;
-  position: relative;
-}
-
-.progress-fill::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-  animation: shimmer 2s infinite;
-}
-
-@keyframes shimmer {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(100%);
-  }
+  background: linear-gradient(90deg, #52c41a 0%, #73d13d 100%);
+  border-radius: 4px;
+  transition: width 0.3s ease;
 }
 
 .empty-state {
@@ -462,33 +361,23 @@ export default {
 }
 
 .coming-soon {
-  padding: 100px 20px;
+  padding: 60px 20px;
   text-align: center;
 }
 
 .coming-soon-icon {
-  font-size: 64px;
-  margin-bottom: 20px;
-  animation: pulse 2s ease infinite;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.1);
-  }
+  font-size: 48px;
+  margin-bottom: 16px;
 }
 
 .coming-soon h2 {
-  font-size: 28px;
+  font-size: 20px;
   color: #333333;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .coming-soon p {
-  font-size: 16px;
+  font-size: 14px;
   color: #666666;
 }
 

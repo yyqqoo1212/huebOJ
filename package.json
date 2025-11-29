@@ -24,11 +24,13 @@
     "axios": "^1.6.8",
     "codemirror": "^6.0.2",
     "core-js": "^3.8.3",
+    "katex": "^0.16.25",
+    "markdown-it": "^14.1.0",
     "pinia": "^2.1.7",
-    "vue": "^3.2.13",
-    "vue-router": "^4.6.3",
     "sass": "^1.79.0",
-    "sass-loader": "^12.6.0"
+    "sass-loader": "^12.6.0",
+    "vue": "^3.2.13",
+    "vue-router": "^4.6.3"
   },
   "devDependencies": {
     "@babel/core": "^7.12.16",
