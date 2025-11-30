@@ -11,6 +11,15 @@ import DiscussionList from '../views/disscussion/DiscussionList.vue'
 import Register from '../views/auth/Register.vue'
 import Login from '../views/auth/Login.vue'
 import Settings from '../views/user/Settings.vue'
+import Admin from '../views/Admin.vue'
+import GeneralSettings from '../views/admin/GeneralSettings.vue'
+import UserManagement from '../views/admin/UserManagement.vue'
+import AnnouncementManagement from '../views/admin/AnnouncementManagement.vue'
+import ProblemManagement from '../views/admin/ProblemManagement.vue'
+import CourseManagement from '../views/admin/CourseManagement.vue'
+import ContestManagement from '../views/admin/ContestManagement.vue'
+import DiscussionManagement from '../views/admin/DiscussionManagement.vue'
+import { setupRouterGuards } from './guards'
 
 const routes = [
   {
@@ -68,6 +77,53 @@ const routes = [
     path: '/discussions',
     name: 'DiscussionList',
     component: DiscussionList
+  },
+  {
+    path: '/admin',
+    name: 'Admin',
+    component: Admin,
+    meta: { requiresAuth: true, requiresAdmin: true },
+    redirect: '/admin/general',
+    children: [
+      {
+        path: 'general',
+        name: 'GeneralSettings',
+        component: GeneralSettings,
+        redirect: '/admin/general/users',
+        children: [
+          {
+            path: 'users',
+            name: 'UserManagement',
+            component: UserManagement
+          },
+          {
+            path: 'announcements',
+            name: 'AnnouncementManagement',
+            component: AnnouncementManagement
+          }
+        ]
+      },
+      {
+        path: 'problems',
+        name: 'ProblemManagement',
+        component: ProblemManagement
+      },
+      {
+        path: 'courses',
+        name: 'CourseManagement',
+        component: CourseManagement
+      },
+      {
+        path: 'contests',
+        name: 'ContestManagement',
+        component: ContestManagement
+      },
+      {
+        path: 'discussions',
+        name: 'DiscussionManagement',
+        component: DiscussionManagement
+      }
+    ]
   }
 ]
 
@@ -75,5 +131,8 @@ const router = createRouter({
   history: createWebHistory(process.env.BASE_URL),
   routes
 })
+
+// 设置路由守卫
+setupRouterGuards(router)
 
 export default router

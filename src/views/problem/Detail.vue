@@ -83,7 +83,7 @@
                         @click="copyToClipboard(sample.input)"
                         title="复制输入样例"
                       >
-                        📋 复制
+                        📋
                       </button>
                     </div>
                     <pre class="sample-code">{{ sample.input }}</pre>
@@ -96,7 +96,7 @@
                         @click="copyToClipboard(sample.output)"
                         title="复制输出样例"
                       >
-                        📋 复制
+                        📋
                       </button>
                     </div>
                     <pre class="sample-code">{{ sample.output }}</pre>

@@ -1,21 +1,37 @@
 <template>
   <div id="app">
-    <NavBar />
+    <NavBar v-if="!isAdminRoute" />
     <router-view v-slot="{ Component, route }">
-      <transition name="fade-slide" mode="out-in">
+      <transition 
+        v-if="!isAdminRoute" 
+        name="fade-slide" 
+        mode="out-in"
+      >
         <component :is="Component" :key="route.path" />
       </transition>
+      <component v-else :is="Component" :key="route.path" />
     </router-view>
   </div>
 </template>
 
 <script>
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import NavBar from './components/NavBar.vue'
 
 export default {
   name: 'App',
   components: {
     NavBar
+  },
+  setup() {
+    const route = useRoute()
+    const isAdminRoute = computed(() => {
+      return route.path.startsWith('/admin')
+    })
+    return {
+      isAdminRoute
+    }
   }
 }
 </script>
