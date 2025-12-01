@@ -13,8 +13,8 @@ import Login from '../views/auth/Login.vue'
 import Settings from '../views/user/Settings.vue'
 import Admin from '../views/Admin.vue'
 import GeneralSettings from '../views/admin/GeneralSettings.vue'
-import UserManagement from '../views/admin/UserManagement.vue'
-import AnnouncementManagement from '../views/admin/AnnouncementManagement.vue'
+import UserManagement from '../views/admin/general/UserManagement.vue'
+import AnnouncementManagement from '../views/admin/general/AnnouncementManagement.vue'
 import ProblemManagement from '../views/admin/ProblemManagement.vue'
 import CourseManagement from '../views/admin/CourseManagement.vue'
 import ContestManagement from '../views/admin/ContestManagement.vue'
@@ -106,7 +106,25 @@ const routes = [
       {
         path: 'problems',
         name: 'ProblemManagement',
-        component: ProblemManagement
+        component: ProblemManagement,
+        redirect: '/admin/problems/new',
+        children: [
+          {
+            path: 'new',
+            name: 'ProblemCreate',
+            component: () => import('../views/admin/problems/ProblemCreate.vue')
+          },
+          {
+            path: 'manage',
+            name: 'ProblemManage',
+            component: () => import('../views/admin/problems/ProblemManage.vue')
+          },
+          {
+            path: 'package',
+            name: 'ProblemPackage',
+            component: () => import('../views/admin/problems/ProblemPackage.vue')
+          }
+        ]
       },
       {
         path: 'courses',

@@ -15,13 +15,18 @@
             class="nav-menu-item nav-menu-parent"
             :class="{ 
               active: isActiveRoute(item.path) || isChildActive(item),
-              expanded: expandedMenus.includes(item.path) || (item.path === '/admin/general' && shouldExpandGeneral)
+              expanded: expandedMenus.includes(item.path)
             }"
             @click="toggleMenu(item.path)"
           >
             <span class="menu-icon">{{ item.icon }}</span>
             <span class="menu-text">{{ item.label }}</span>
-            <span class="menu-arrow" :class="{ expanded: expandedMenus.includes(item.path) || (item.path === '/admin/general' && shouldExpandGeneral) }">▶</span>
+            <span 
+              class="menu-arrow" 
+              :class="{ expanded: expandedMenus.includes(item.path) }"
+            >
+              ▶
+            </span>
           </div>
           <router-link 
             v-else
@@ -34,7 +39,7 @@
           </router-link>
           
           <!-- 子菜单 -->
-          <div v-show="item.children && (expandedMenus.includes(item.path) || (item.path === '/admin/general' && shouldExpandGeneral))" class="submenu">
+          <div v-show="item.children && expandedMenus.includes(item.path)" class="submenu">
             <router-link
               v-for="child in item.children"
               :key="child.path"
@@ -75,16 +80,20 @@ export default {
             { path: '/admin/general/announcements', label: '公告管理', icon: '📢' }
           ]
         },
-        { path: '/admin/problems', label: '题库管理', icon: '📚' },
+        { 
+          path: '/admin/problems', 
+          label: '题库管理', 
+          icon: '📚',
+          children: [
+            { path: '/admin/problems/new', label: '新增题目', icon: '➕' },
+            { path: '/admin/problems/manage', label: '题目管理', icon: '📋' },
+            { path: '/admin/problems/package', label: '题目打包', icon: '📦' }
+          ]
+        },
         { path: '/admin/courses', label: '课程管理', icon: '📖' },
         { path: '/admin/contests', label: '比赛管理', icon: '🏆' },
         { path: '/admin/discussions', label: '讨论管理', icon: '💬' }
       ]
-    }
-  },
-  computed: {
-    shouldExpandGeneral() {
-      return this.$route.path.startsWith('/admin/general')
     }
   },
   methods: {
@@ -96,11 +105,6 @@ export default {
       return item.children.some(child => this.$route.path === child.path)
     },
     toggleMenu(path) {
-      // 如果当前路由是常规设置的子路由，不允许关闭菜单
-      if (path === '/admin/general' && this.$route.path.startsWith('/admin/general')) {
-        // 如果已经在常规设置的子路由，不允许关闭
-        return
-      }
       const index = this.expandedMenus.indexOf(path)
       if (index > -1) {
         this.expandedMenus.splice(index, 1)
@@ -113,6 +117,12 @@ export default {
       if (this.$route.path.startsWith('/admin/general')) {
         if (!this.expandedMenus.includes('/admin/general')) {
           this.expandedMenus.push('/admin/general')
+        }
+      }
+      // 如果当前路由是题库管理的子路由，确保展开状态保持
+      if (this.$route.path.startsWith('/admin/problems')) {
+        if (!this.expandedMenus.includes('/admin/problems')) {
+          this.expandedMenus.push('/admin/problems')
         }
       }
     }
