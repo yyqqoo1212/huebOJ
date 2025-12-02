@@ -23,3 +23,12 @@ export const getProblemDetail = (problemId) => {
   return http.get(`/problems/${problemId}`)
 }
 
+/**
+ * 创建题目
+ * @param {Object} data - 题目数据
+ * @returns {Promise}
+ */
+export const createProblem = (data) => {
+  return http.post('/problems/create', data)
+}
+
