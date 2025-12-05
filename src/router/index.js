@@ -115,6 +115,11 @@ const routes = [
             component: () => import('../views/admin/problems/ProblemCreate.vue')
           },
           {
+            path: 'edit/:id',
+            name: 'ProblemEdit',
+            component: () => import('../views/admin/problems/ProblemEdit.vue')
+          },
+          {
             path: 'manage',
             name: 'ProblemManage',
             component: () => import('../views/admin/problems/ProblemManage.vue')

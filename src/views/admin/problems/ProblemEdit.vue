@@ -1,11 +1,13 @@
 <template>
   <div class="problem-create">
     <div class="page-header">
-      <h1>新增题目</h1>
+      <h1>编辑题目</h1>
       <p class="page-subtitle">请完整填写题目信息，* 为必填项</p>
     </div>
 
-    <div class="form-container">
+    <div v-if="loading" class="loading-state">正在加载题目信息...</div>
+    <div v-else-if="loadError" class="error-state">{{ loadError }}</div>
+    <div v-else class="form-container">
       <section class="form-section">
         <h2>基础信息</h2>
         <div class="form-grid">
@@ -233,9 +235,6 @@
           </label>
         </div>
 
-        <!-- 所有正常/异常流程都有清理，唯一可能滞留的是“验证通过但用户未提交”导致的解压临时目录（受缓存 TTL 控制）。
-        如果要彻底规避，可在后端增加定期清扫超时目录的任务，或在验证返回时记录临时路径并设置更短 TTL。 -->
-
         <!-- 手动上传模式 -->
         <div v-if="testcaseUploadMode === 'manual'" class="manual-upload">
           <div class="testcase-list">
@@ -321,8 +320,8 @@
         <button class="btn-primary" :disabled="saving" @click="submitForm">
           {{ saving ? '保存中...' : '保存题目' }}
         </button>
-        <button class="btn-secondary" @click="resetForm">
-          重置表单
+        <button class="btn-secondary" @click="goBack">
+          返回
         </button>
       </div>
 
@@ -336,17 +335,19 @@
 </template>
 
 <script>
-import { createProblem } from '@/api/problem'
-import { userStorage } from '@/utils/storage'
+import { getProblemDetail, updateProblem, uploadZipFile, uploadTestcaseFiles, uploadExtractedTestcases, clearProblemTestcases } from '@/api/problem'
 import MarkdownIt from 'markdown-it'
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
 
 export default {
-  name: 'ProblemCreate',
+  name: 'ProblemEdit',
   data() {
     return {
       md: null, // Markdown 渲染器实例
+      problemId: null,
+      loading: false,
+      loadError: '',
       form: {
         title: '',
         content: '',
@@ -368,13 +369,6 @@ export default {
           { input: '', output: '' }
         ]
       },
-      testcaseUploadMode: 'manual',
-      zipFile: null,
-      extracting: false,
-      extractProgress: 0,
-      extractError: '',
-      extractedFiles: [],
-      extractedToken: '',
       fieldErrors: {
         title: false,
         content: false,
@@ -389,7 +383,14 @@ export default {
       saveSuccess: false,
       feedbackVisible: false,
       feedbackMessage: '',
-      feedbackType: 'success'
+      feedbackType: 'success',
+      testcaseUploadMode: 'manual',
+      zipFile: null,
+      extracting: false,
+      extractProgress: 0,
+      extractError: '',
+      extractedFiles: [],
+      extractedToken: ''
     }
   },
   created() {
@@ -399,6 +400,13 @@ export default {
       linkify: true, // 自动识别链接
       breaks: true // 将换行符转换为 <br>
     })
+    
+    this.problemId = parseInt(this.$route.params.id)
+    if (!this.problemId) {
+      this.loadError = '题目ID无效'
+      return
+    }
+    this.loadProblem()
   },
   methods: {
     // 渲染 Markdown 和 LaTeX 内容（与 Detail.vue 保持一致）
@@ -499,6 +507,42 @@ export default {
       
       return html
     },
+    async loadProblem() {
+      this.loading = true
+      this.loadError = ''
+      try {
+        const res = await getProblemDetail(this.problemId, { allow_all: true })
+        const data = res.data || res
+        
+        // 填充表单
+        this.form.title = data.title || ''
+        this.form.content = data.content || ''
+        this.form.input_description = data.input_description || ''
+        this.form.output_description = data.output_description || ''
+        this.form.hint = data.hint || ''
+        this.form.time_limit = data.time_limit || 1000
+        this.form.memory_limit = data.memory_limit || 256
+        this.form.level = data.difficulty || 1
+        this.form.auth = data.auth || 1
+        this.form.score = data.score || 100
+        this.form.tag = (data.tags || []).join('|') || ''
+        
+        // 处理样例数据
+        if (data.samples && data.samples.length > 0) {
+          this.form.samples = data.samples.map(s => ({
+            input: s.input || '',
+            output: s.output || ''
+          }))
+        } else {
+          this.form.samples = [{ input: '', output: '' }]
+        }
+      } catch (err) {
+        console.error('加载题目详情失败:', err)
+        this.loadError = err.message || '加载题目详情失败，请稍后重试'
+      } finally {
+        this.loading = false
+      }
+    },
     addSample() {
       this.form.samples.push({ input: '', output: '' })
     },
@@ -520,9 +564,9 @@ export default {
       this.zipFile = file
       this.extractError = ''
       this.extractedFiles = []
+      this.extractedToken = ''
       this.extractProgress = 0
 
-      // 上传并解压
       this.extractZipFile(file)
     },
     async extractZipFile(file) {
@@ -534,8 +578,6 @@ export default {
         const formData = new FormData()
         formData.append('file', file)
 
-        // 使用 axios 的 onUploadProgress 来模拟解压进度
-        const { uploadZipFile } = await import('@/api/problem')
         const response = await uploadZipFile(formData, (progressEvent) => {
           if (progressEvent.lengthComputable) {
             this.extractProgress = Math.round(
@@ -544,7 +586,6 @@ export default {
           }
         })
 
-        // 模拟解压进度（后50%）
         for (let i = 50; i <= 100; i += 10) {
           await new Promise((resolve) => setTimeout(resolve, 200))
           this.extractProgress = i
@@ -592,7 +633,8 @@ export default {
         auth: 'authSelect',
         content: 'contentTextarea',
         input_description: 'inputDescTextarea',
-        output_description: 'outputDescTextarea'
+        output_description: 'outputDescTextarea',
+        hint: 'hintTextarea'
       }
       const refName = refMap[field]
       const el = refName ? this.$refs[refName] : null
@@ -610,7 +652,7 @@ export default {
         } else {
           console.error(msg)
         }
-        this.showFeedback('error', msg || '保存失败')
+        this.showFeedback('error', msg || '更新失败')
       }
       const showSuccess = (msg) => {
         if (this.$message?.success) {
@@ -618,7 +660,7 @@ export default {
         } else {
           console.log(msg)
         }
-        this.showFeedback('success', msg || '保存成功')
+        this.showFeedback('success', msg || '更新成功')
       }
 
       // 重置错误状态和状态提示
@@ -676,12 +718,6 @@ export default {
         return showError('题目权限非法，只能是 1/2/3')
       }
 
-      const user = userStorage.load()
-      const author = user?.username || ''
-      if (!author) {
-        return showError('当前未登录或用户信息缺失，无法创建题目')
-      }
-
       // 将样例数据合并到 input_demo / output_demo
       let input_demo = ''
       let output_demo = ''
@@ -697,7 +733,6 @@ export default {
       }
 
       const payload = {
-        author,
         title: this.form.title,
         level: Number(this.form.level),
         time_limit: this.form.time_limit,
@@ -713,61 +748,64 @@ export default {
         hint: this.form.hint
       }
 
+      // 判断是否需要处理测评数据
+      const hasManualTestcase = this.form.testcases.some(
+        (tc) => (tc.input && tc.input.trim()) || (tc.output && tc.output.trim())
+      )
+      const hasAutoTestcase = this.extractedFiles.length > 0 && this.extractedToken
+
       this.saving = true
 
       try {
-        const response = await createProblem(payload)
-        const problemId = response.data?.problem_id
+        await updateProblem(this.problemId, payload)
+        // 异步删除旧测评数据并上传新数据
+        if (hasManualTestcase || hasAutoTestcase) {
+          const uploadPromise = (async () => {
+            // 先清空旧的测评数据
+            await clearProblemTestcases(this.problemId)
+            if (hasManualTestcase) {
+              const snapshot = this.form.testcases.map(tc => ({
+                input: tc.input || '',
+                output: tc.output || ''
+              }))
+              await this.uploadManualTestcases(this.problemId, snapshot)
+            } else if (hasAutoTestcase) {
+              await this.uploadAutoTestcases(this.problemId, this.extractedToken)
+            }
+          })()
 
-        // 准备异步上传测评数据，避免阻塞“保存题目”反馈
-        let uploadPromise = null
-        if (problemId) {
-          if (this.testcaseUploadMode === 'manual' && this.form.testcases.length > 0) {
-            // 拷贝一份数据，避免 resetForm 清空后影响上传
-            const testcasesSnapshot = this.form.testcases.map(tc => ({
-              input: tc.input || '',
-              output: tc.output || ''
-            }))
-            uploadPromise = this.uploadManualTestcases(problemId, testcasesSnapshot)
-          } else if (this.testcaseUploadMode === 'auto' && this.extractedFiles.length > 0 && this.extractedToken) {
-            const tokenSnapshot = this.extractedToken
-            uploadPromise = this.uploadAutoTestcases(problemId, tokenSnapshot)
-          }
-        }
-
-        showSuccess(uploadPromise ? '创建题目成功，测评数据后台上传中' : '创建题目成功')
-        this.saveSuccess = true
-        this.resetForm()
-        this.scrollToTop()
-
-        if (uploadPromise) {
           uploadPromise
             .then(() => {
-              this.showFeedback('success', '测评数据上传完成')
+              if (this.$message?.success) this.$message.success('测评数据已更新')
             })
             .catch((err) => {
-              console.error('测评数据上传失败:', err)
-              this.showFeedback('error', err?.message || '测评数据上传失败，请稍后重试')
+              console.error('测评数据更新失败:', err)
+              if (this.$message?.error) {
+                this.$message.error(err?.message || '测评数据更新失败，请稍后重试')
+              }
             })
         }
+
+        showSuccess(hasManualTestcase || hasAutoTestcase ? '更新题目成功，测评数据后台更新中' : '更新题目成功')
+        this.saveSuccess = true
+        // 2秒后返回管理页面
+        setTimeout(() => {
+          this.$router.push('/admin/problems/manage')
+        }, 2000)
       } catch (error) {
-        console.error('创建题目失败:', error)
-        showError(error.message || '创建题目失败，请稍后重试')
-        this.scrollToTop()
+        console.error('更新题目失败:', error)
+        showError(error.message || '更新题目失败，请稍后重试')
       } finally {
         this.saving = false
       }
     },
     async uploadManualTestcases(problemId, testcases) {
-      const { uploadTestcaseFiles } = await import('@/api/problem')
       const files = []
-
       testcases.forEach((testcase, index) => {
         const num = index + 1
         const hasInput = (testcase.input || '').trim().length > 0
         const hasOutput = (testcase.output || '').trim().length > 0
         if (!hasInput && !hasOutput) return
-
         files.push({
           name: `${num}.in`,
           content: testcase.input || ''
@@ -783,7 +821,6 @@ export default {
       }
     },
     async uploadAutoTestcases(problemId, token) {
-      const { uploadExtractedTestcases } = await import('@/api/problem')
       await uploadExtractedTestcases(problemId, token)
     },
     showFeedback(type, message) {
@@ -794,46 +831,8 @@ export default {
         this.feedbackVisible = false
       }, 2000)
     },
-    scrollToTop() {
-      if (typeof window !== 'undefined') {
-        window.scrollTo({ top: 0, behavior: 'smooth' })
-      }
-    },
-    resetForm() {
-      this.form = {
-        title: '',
-        content: '',
-        time_limit: 1000,
-        memory_limit: 256,
-        level: 1,
-        input_description: '',
-        output_description: '',
-        input_demo: '',
-        output_demo: '',
-        hint: '',
-        tag: '',
-        auth: 1,
-        samples: [
-          { input: '', output: '' }
-        ],
-        testcases: [
-          { input: '', output: '' }
-        ]
-      }
-      this.testcaseUploadMode = 'manual'
-      this.zipFile = null
-      this.extractedToken = ''
-      this.extracting = false
-      this.extractProgress = 0
-      this.extractError = ''
-      this.extractedFiles = []
-      if (this.$refs.zipFileInput) {
-        this.$refs.zipFileInput.value = ''
-      }
-      // 清空 Quill 编辑器
-      if (this.quill) {
-        this.quill.setText('')
-      }
+    goBack() {
+      this.$router.push('/admin/problems/manage')
     }
   }
 }
@@ -921,7 +920,6 @@ textarea:focus {
 .textarea {
   min-height: 140px;
 }
-
 
 .textarea-item textarea {
   min-height: 120px;
@@ -1207,6 +1205,7 @@ textarea:focus {
 .fade-leave-to {
   opacity: 0;
 }
+
 .loading-state,
 .error-state,
 .empty-state {
@@ -1484,5 +1483,5 @@ textarea:focus {
   color: #999999;
   font-size: 14px;
 }
-
 </style>
+
