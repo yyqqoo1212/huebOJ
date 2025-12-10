@@ -49,3 +49,22 @@ export const getUserList = (params = {}) =>
 export const deleteUser = (userId) =>
   http.delete(`/users/${userId}/delete`)
 
+// 管理员接口：更新用户信息
+export const updateUser = (userId, payload) =>
+  http.patch(`/users/${userId}/update`, {
+    username: payload.username,
+    email: payload.email,
+    gender: payload.gender || '',
+    student_id: payload.studentId || '',
+    class_name: payload.className || '',
+    real_name: payload.realName || '',
+    status: payload.status || 'normal',
+    permission: payload.permission !== undefined ? Number(payload.permission) : undefined
+  })
+
+// 管理员接口：重置用户密码
+export const resetUserPassword = (userId, newPassword) =>
+  http.post(`/users/${userId}/reset-password`, {
+    new_password: newPassword
+  })
+

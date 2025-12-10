@@ -55,11 +55,12 @@
             <th>真实姓名</th>
             <th>状态</th>
             <th>权限</th>
+            <th style="text-align: center;">操作</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="users.length === 0">
-            <td :colspan="batchDeleteMode ? 8 : 7" class="empty-text">暂无用户数据</td>
+            <td :colspan="batchDeleteMode ? 9 : 8" class="empty-text">暂无用户数据</td>
           </tr>
           <tr v-for="user in users" :key="user.id">
             <td v-if="batchDeleteMode" style="text-align: center;">
@@ -84,6 +85,23 @@
               <span :class="['permission-badge', `permission-${user.permission}`]">
                 {{ getPermissionText(user.permission) }}
               </span>
+            </td>
+            <td class="actions-cell">
+              <button 
+                class="icon-btn icon-edit" 
+                title="编辑用户"
+                @click="openEditModal(user)"
+              >
+                ✏️
+              </button>
+              <button
+                class="icon-btn icon-delete"
+                title="删除用户"
+                :disabled="deleteLoading && deleteTarget && deleteTarget.id === user.id"
+                @click="openDeleteModal(user)"
+              >
+                🗑️
+              </button>
             </td>
           </tr>
         </tbody>
@@ -190,11 +208,231 @@
         </div>
       </div>
     </transition>
+
+    <!-- 单个删除确认弹窗 -->
+    <transition name="fade">
+      <div
+        v-if="showDeleteModal"
+        class="modal-overlay"
+        @click.self="closeDeleteModal"
+      >
+        <div class="modal-card">
+          <h3>确认删除用户？</h3>
+          <p>删除后将移除该用户的所有信息及相关数据，且无法恢复。</p>
+          <p v-if="deleteTarget" class="modal-problem-title">
+            将删除：{{ deleteTarget.id }} - {{ deleteTarget.username }}
+          </p>
+          <div class="modal-actions">
+            <button
+              class="modal-cancel"
+              @click="closeDeleteModal"
+              :disabled="deleteLoading"
+            >
+              再想想
+            </button>
+            <button
+              class="modal-confirm"
+              @click="confirmDelete"
+              :disabled="deleteLoading"
+            >
+              {{ deleteLoading ? '正在删除...' : '确认删除' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+    <!-- 编辑用户弹窗 -->
+    <transition name="fade">
+      <div
+        v-if="showEditModal"
+        class="modal-overlay"
+        @click.self="closeEditModal"
+      >
+        <div class="modal-card edit-modal-card">
+          <h3>编辑用户信息</h3>
+          <div class="edit-form">
+            <div class="form-row">
+              <div class="form-group">
+                <label>用户ID</label>
+                <input type="text" :value="editForm.id" disabled class="form-input" />
+              </div>
+              <div class="form-group">
+                <label>用户名 <span class="required">*</span></label>
+                <input 
+                  type="text" 
+                  v-model="editForm.username" 
+                  class="form-input"
+                  placeholder="请输入用户名"
+                />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>邮箱 <span class="required">*</span></label>
+                <input 
+                  type="email" 
+                  v-model="editForm.email" 
+                  class="form-input"
+                  placeholder="请输入邮箱"
+                />
+              </div>
+              <div class="form-group">
+                <label>性别</label>
+                <select v-model="editForm.gender" class="form-input">
+                  <option value="M">男</option>
+                  <option value="F">女</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>学号</label>
+                <input 
+                  type="text" 
+                  v-model="editForm.student_id" 
+                  class="form-input"
+                  placeholder="请输入学号"
+                />
+              </div>
+              <div class="form-group">
+                <label>班级</label>
+                <input 
+                  type="text" 
+                  v-model="editForm.class_name" 
+                  class="form-input"
+                  placeholder="请输入班级"
+                />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>真实姓名</label>
+                <input 
+                  type="text" 
+                  v-model="editForm.real_name" 
+                  class="form-input"
+                  placeholder="请输入真实姓名"
+                />
+              </div>
+              <div class="form-group">
+                <label>状态</label>
+                <select v-model="editForm.status" class="form-input">
+                  <option value="normal">正常</option>
+                  <option value="banned">封禁</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>权限</label>
+                <select v-model.number="editForm.permission" class="form-input">
+                  <option :value="0">普通用户</option>
+                  <option :value="1">管理员</option>
+                  <option :value="2">超级管理员</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>密码</label>
+                <div class="password-reset-section">
+                  <input 
+                    type="password" 
+                    value="********" 
+                    disabled 
+                    class="form-input password-disabled"
+                  />
+                  <button 
+                    class="btn-reset-password"
+                    @click="openResetPasswordModal"
+                    :disabled="editLoading"
+                  >
+                    重置密码
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button
+              class="modal-cancel"
+              @click="closeEditModal"
+              :disabled="editLoading"
+            >
+              取消
+            </button>
+            <button
+              class="modal-confirm"
+              @click="confirmEdit"
+              :disabled="editLoading"
+            >
+              {{ editLoading ? '保存中...' : '保存' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+    <!-- 重置密码弹窗 -->
+    <transition name="fade">
+      <div
+        v-if="showResetPasswordModal"
+        class="modal-overlay"
+        @click.self="closeResetPasswordModal"
+      >
+        <div class="modal-card">
+          <h3>重置用户密码</h3>
+          <p>请输入新密码（至少6位）</p>
+          <div class="form-group">
+            <label>新密码 <span class="required">*</span></label>
+            <input 
+              type="password" 
+              v-model="resetPasswordForm.newPassword" 
+              class="form-input"
+              placeholder="请输入新密码"
+              @keyup.enter="confirmResetPassword"
+            />
+          </div>
+          <div class="form-group">
+            <label>确认密码 <span class="required">*</span></label>
+            <input 
+              type="password" 
+              v-model="resetPasswordForm.confirmPassword" 
+              class="form-input"
+              placeholder="请再次输入新密码"
+              @keyup.enter="confirmResetPassword"
+            />
+          </div>
+          <div class="modal-actions">
+            <button
+              class="modal-cancel"
+              @click="closeResetPasswordModal"
+              :disabled="resetPasswordLoading"
+            >
+              取消
+            </button>
+            <button
+              class="modal-confirm"
+              @click="confirmResetPassword"
+              :disabled="resetPasswordLoading"
+            >
+              {{ resetPasswordLoading ? '重置中...' : '确认重置' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+    <!-- 反馈提示弹窗 -->
+    <transition name="fade">
+      <div v-if="feedbackVisible" class="center-feedback" :class="`center-feedback-${feedbackType}`">
+        {{ feedbackMessage }}
+      </div>
+    </transition>
   </div>
 </template>
 
 <script>
-import { getUserList, deleteUser } from '@/api/user'
+import { getUserList, deleteUser, updateUser, resetUserPassword } from '@/api/user'
 
 export default {
   name: 'UserManagement',
@@ -216,7 +454,32 @@ export default {
       batchDeleteMode: false,
       selectedUsers: [],
       showBatchDeleteModal: false,
-      batchDeleteLoading: false
+      batchDeleteLoading: false,
+      showDeleteModal: false,
+      deleteTarget: null,
+      deleteLoading: false,
+      showEditModal: false,
+      editForm: {
+        id: null,
+        username: '',
+        email: '',
+        gender: '',
+        student_id: '',
+        class_name: '',
+        real_name: '',
+        status: 'normal',
+        permission: 0
+      },
+      editLoading: false,
+      showResetPasswordModal: false,
+      resetPasswordForm: {
+        newPassword: '',
+        confirmPassword: ''
+      },
+      resetPasswordLoading: false,
+      feedbackVisible: false,
+      feedbackMessage: '',
+      feedbackType: 'success'
     }
   },
   computed: {
@@ -431,6 +694,171 @@ export default {
         2: '超级管理员'
       }
       return map[perm] || `权限${perm}`
+    },
+    openDeleteModal(user) {
+      if (this.loading || this.deleteLoading) return
+      this.deleteTarget = user
+      this.showDeleteModal = true
+    },
+    closeDeleteModal() {
+      if (this.deleteLoading) return
+      this.showDeleteModal = false
+      this.deleteTarget = null
+    },
+    async confirmDelete() {
+      if (!this.deleteTarget || this.deleteLoading) return
+      this.deleteLoading = true
+      try {
+        await deleteUser(this.deleteTarget.id)
+        if (this.$message?.success) {
+          this.$message.success('删除用户成功')
+        }
+        const nextPage =
+          this.users.length === 1 && this.pagination.page > 1
+            ? this.pagination.page - 1
+            : this.pagination.page
+        await this.fetchUsers(nextPage)
+        this.showDeleteModal = false
+        this.deleteTarget = null
+      } catch (err) {
+        console.error('删除用户失败:', err)
+        if (this.$message?.error) {
+          this.$message.error(err.message || '删除用户失败，请稍后重试')
+        }
+      } finally {
+        this.deleteLoading = false
+      }
+    },
+    openEditModal(user) {
+      if (this.loading || this.editLoading) return
+      this.editForm = {
+        id: user.id,
+        username: user.username || '',
+        email: user.email || '',
+        gender: user.gender || '',
+        student_id: user.student_id || '',
+        class_name: user.class_name || '',
+        real_name: user.real_name || '',
+        status: user.status || 'normal',
+        permission: Number(user.permission) || 0
+      }
+      this.showEditModal = true
+    },
+    closeEditModal() {
+      if (this.editLoading) return
+      this.showEditModal = false
+      this.editForm = {
+        id: null,
+        username: '',
+        email: '',
+        gender: '',
+        student_id: '',
+        class_name: '',
+        real_name: '',
+        status: 'normal',
+        permission: 0
+      }
+    },
+    async confirmEdit() {
+      if (!this.editForm.id || this.editLoading) return
+      
+      // 验证必填字段
+      if (!this.editForm.username || !this.editForm.email) {
+        this.showFeedback('error', '用户名和邮箱不能为空')
+        return
+      }
+      
+      this.editLoading = true
+      try {
+        await updateUser(this.editForm.id, {
+          username: this.editForm.username,
+          email: this.editForm.email,
+          gender: this.editForm.gender,
+          studentId: this.editForm.student_id,
+          className: this.editForm.class_name,
+          realName: this.editForm.real_name,
+          status: this.editForm.status,
+          permission: this.editForm.permission
+        })
+        
+        // 显示成功反馈（绿色弹窗）
+        this.showFeedback('success', '更新用户信息成功')
+        
+        // 刷新当前页
+        await this.fetchUsers(this.pagination.page)
+        
+        // 延迟关闭弹窗，确保用户能看到反馈消息
+        setTimeout(() => {
+          this.closeEditModal()
+        }, 500)
+      } catch (err) {
+        console.error('更新用户信息失败:', err)
+        // 显示失败反馈（红色弹窗）
+        this.showFeedback('error', err.message || '更新用户信息失败，请稍后重试')
+      } finally {
+        this.editLoading = false
+      }
+    },
+    openResetPasswordModal() {
+      this.resetPasswordForm = {
+        newPassword: '',
+        confirmPassword: ''
+      }
+      this.showResetPasswordModal = true
+    },
+    closeResetPasswordModal() {
+      if (this.resetPasswordLoading) return
+      this.showResetPasswordModal = false
+      this.resetPasswordForm = {
+        newPassword: '',
+        confirmPassword: ''
+      }
+    },
+    async confirmResetPassword() {
+      if (!this.editForm.id || this.resetPasswordLoading) return
+      
+      // 验证密码
+      if (!this.resetPasswordForm.newPassword) {
+        this.showFeedback('error', '请输入新密码')
+        return
+      }
+      
+      if (this.resetPasswordForm.newPassword.length < 6) {
+        this.showFeedback('error', '密码长度至少6位')
+        return
+      }
+      
+      if (this.resetPasswordForm.newPassword !== this.resetPasswordForm.confirmPassword) {
+        this.showFeedback('error', '两次输入的密码不一致')
+        return
+      }
+      
+      this.resetPasswordLoading = true
+      try {
+        await resetUserPassword(this.editForm.id, this.resetPasswordForm.newPassword)
+        
+        // 显示成功反馈（绿色弹窗）
+        this.showFeedback('success', '密码重置成功')
+        
+        // 延迟关闭弹窗，确保用户能看到反馈消息
+        setTimeout(() => {
+          this.closeResetPasswordModal()
+        }, 500)
+      } catch (err) {
+        console.error('重置密码失败:', err)
+        // 显示失败反馈（红色弹窗）
+        this.showFeedback('error', err.message || '重置密码失败，请稍后重试')
+      } finally {
+        this.resetPasswordLoading = false
+      }
+    },
+    showFeedback(type, message) {
+      this.feedbackType = type
+      this.feedbackMessage = message
+      this.feedbackVisible = true
+      setTimeout(() => {
+        this.feedbackVisible = false
+      }, 2000)
     }
   },
   beforeUnmount() {
@@ -689,6 +1117,44 @@ export default {
   color: #999999;
 }
 
+.actions-cell {
+  width: 120px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.icon-btn {
+  min-width: 28px;
+  height: 24px;
+  border-radius: 4px;
+  border: 1px solid #d9d9d9;
+  background: #ffffff;
+  cursor: pointer;
+  font-size: 12px;
+  margin-left: 6px;
+  padding: 0 6px;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.icon-btn:hover {
+  transform: translateY(-1px);
+  opacity: 0.85;
+}
+
+.icon-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.icon-btn.icon-edit {
+  background-color: #f5f5f5;
+}
+
+.icon-btn.icon-delete {
+  background-color: #fff1f0;
+}
+
 .pagination-container {
   margin-top: 24px;
   padding: 20px 24px;
@@ -922,6 +1388,126 @@ export default {
   opacity: 0;
 }
 
+.center-feedback {
+  position: fixed;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 220px;
+  padding: 12px 18px;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  z-index: 2000;
+}
+
+.center-feedback-success {
+  background-color: #f6ffed;
+  border: 1px solid #b7eb8f;
+  color: #389e0d;
+}
+
+.center-feedback-error {
+  background-color: #fff2f0;
+  border: 1px solid #ffccc7;
+  color: #cf1322;
+}
+
+.edit-modal-card {
+  width: min(800px, 90vw);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.edit-modal-card h3 {
+  margin: 0 0 16px;
+  font-size: 18px;
+  color: #111827;
+}
+
+.edit-form {
+  margin: 0 0 20px 0;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.form-group {
+  margin-bottom: 0;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: #333333;
+  font-weight: 500;
+}
+
+.form-group .required {
+  color: #ff4d4f;
+}
+
+.form-input {
+  width: 100%;
+  padding: 7px 11px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  font-size: 13px;
+  outline: none;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+  height: 32px;
+}
+
+.form-input:focus {
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+.form-input:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+  color: #999999;
+}
+
+.password-reset-section {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.password-disabled {
+  flex: 1;
+}
+
+.btn-reset-password {
+  padding: 8px 16px;
+  border: 1px solid #1890ff;
+  border-radius: 4px;
+  background-color: #e6f7ff;
+  color: #1890ff;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-reset-password:hover:not(:disabled) {
+  background-color: #bae7ff;
+}
+
+.btn-reset-password:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 @media (max-width: 768px) {
   .pagination-container {
     flex-direction: column;
@@ -939,6 +1525,19 @@ export default {
 
   .page-size-selector {
     justify-content: center;
+  }
+
+  .edit-modal-card {
+    width: min(95vw, 600px);
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .form-group {
+    margin-bottom: 12px;
   }
 }
 </style>
