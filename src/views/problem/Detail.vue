@@ -344,7 +344,10 @@ export default {
     this.disposeEditor()
   },
   watch: {
-    selectedLanguage() {
+    selectedLanguage(newLang) {
+      // 保存语言选择到缓存
+      this.saveLanguageToCache(newLang)
+      
       if (this.editor) {
         this.updateEditorLanguage()
       }
@@ -496,6 +499,9 @@ export default {
           } else {
             this.parseSamples(data.input_demo, data.output_demo)
           }
+          
+          // 加载该题目的语言选择缓存
+          this.loadCachedLanguage()
         } else {
           this.$message?.error(response.message || '获取题目详情失败')
           this.$router.push('/problems')
@@ -828,10 +834,38 @@ export default {
         console.error('更新主题失败:', error)
       }
     },
-    // 获取缓存键（基于题目ID和语言）
+    // 获取代码缓存键（基于题目ID和语言）
     getCacheKey() {
       const problemId = this.problem?.id || this.$route.params.id || 'unknown'
       return `code_editor_${problemId}_${this.selectedLanguage}`
+    },
+    // 获取语言缓存键（基于题目ID）
+    getLanguageCacheKey() {
+      const problemId = this.problem?.id || this.$route.params.id || 'unknown'
+      return `language_${problemId}`
+    },
+    // 从缓存读取语言选择
+    loadCachedLanguage() {
+      try {
+        const key = this.getLanguageCacheKey()
+        const cachedLang = localStorage.getItem(key)
+        if (cachedLang && ['cpp', 'java', 'python', 'javascript'].includes(cachedLang)) {
+          this.selectedLanguage = cachedLang
+        }
+      } catch (error) {
+        console.warn('读取语言缓存失败:', error)
+      }
+    },
+    // 保存语言选择到缓存
+    saveLanguageToCache(language) {
+      try {
+        const key = this.getLanguageCacheKey()
+        if (language && ['cpp', 'java', 'python', 'javascript'].includes(language)) {
+          localStorage.setItem(key, language)
+        }
+      } catch (error) {
+        console.warn('保存语言缓存失败:', error)
+      }
     },
     // 从缓存读取代码
     getCachedCode() {
@@ -924,6 +958,9 @@ export default {
         return
       }
 
+      // 在运行自测前，显式保存代码到缓存
+      this.saveCodeToCache()
+
       this.testRunning = true
       this.testOutput = ''
       this.testResult = null
@@ -969,6 +1006,9 @@ export default {
         this.$message?.warning('代码不能为空')
         return
       }
+
+      // 在提交代码前，显式保存代码到缓存
+      this.saveCodeToCache()
 
       try {
         // 设置提交状态为Judging

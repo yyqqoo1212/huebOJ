@@ -22,45 +22,78 @@
           <div class="table-header">
             <div class="col-rank">排名</div>
             <div class="col-user">用户</div>
+            <div class="col-motto">个性签名</div>
             <div class="col-solved">正确题数</div>
-            <div class="col-progress">进度</div>
           </div>
 
-          <div v-if="solvedRanking.length > 0">
+          <div v-if="loading" class="loading-state">
+            <p class="loading-text">加载中...</p>
+          </div>
+
+          <div v-else-if="solvedRanking.length > 0">
             <div 
               v-for="(user, index) in solvedRanking" 
               :key="user.id"
-              :class="['table-row', `rank-${index + 1}`]"
+              :class="['table-row', `rank-${index + 1}`, { 'current-user': isCurrentUser(user.id) }]"
             >
               <div class="col-rank">
                 <span v-if="index < 3" class="medal">{{ getMedal(index) }}</span>
-                <span v-else class="rank-number">{{ index + 1 }}</span>
+                <span v-else class="rank-number">{{ (pagination.page - 1) * pagination.page_size + index + 1 }}</span>
               </div>
-               <div class="col-user">
-                 <div class="user-info">
-                   <div class="avatar">{{ user.avatar || user.name.charAt(0) }}</div>
-                   <div class="user-details">
-                     <span class="username">{{ user.name }}</span>
-                     <span class="user-id">ID: {{ user.id }}</span>
-                   </div>
-                 </div>
-               </div>
-              <div class="col-solved">
-                <span class="solved-count">{{ user.solvedCount }}</span>
-                <span class="solved-label">题</span>
-              </div>
-              <div class="col-progress">
-                <div class="progress-bar">
-                  <div 
-                    class="progress-fill" 
-                    :style="{ width: (user.solvedCount / maxSolved) * 100 + '%' }"
-                  ></div>
+              <div class="col-user">
+                <div class="user-info">
+                  <div class="avatar">{{ user.username?.charAt(0)?.toUpperCase() || 'U' }}</div>
+                  <div class="user-details">
+                    <span class="username">{{ user.username }}</span>
+                    <span v-if="user.real_name" class="user-real-name">{{ user.real_name }}</span>
+                    <span v-else class="user-id">ID: {{ user.id }}</span>
+                  </div>
                 </div>
+              </div>
+              <div class="col-motto">
+                <span class="motto-text">{{ user.motto || '-' }}</span>
+              </div>
+              <div class="col-solved">
+                <span class="solved-count">{{ user.accepted_submissions }}</span>
+                <span class="solved-label">题</span>
               </div>
             </div>
           </div>
           <div v-else class="empty-state">
             <p class="empty-text">暂无排行榜数据</p>
+          </div>
+        </div>
+
+        <!-- 翻页器 -->
+        <div v-if="!loading && pagination.total_pages > 0" class="pagination-container">
+          <div class="pagination-info">
+            <span>共 {{ pagination.total }} 人</span>
+            <span class="page-info">第 {{ pagination.page }} / {{ pagination.total_pages }} 页</span>
+          </div>
+          <div class="pagination">
+            <button 
+              class="pagination-btn"
+              :disabled="!pagination.has_previous || loading"
+              @click="handlePageChange(pagination.page - 1)"
+            >
+              上一页
+            </button>
+            <button
+              v-for="pageNum in getPageNumbers()"
+              :key="pageNum"
+              :class="['pagination-btn', 'pagination-number', { active: pageNum === pagination.page, disabled: pageNum === '...' }]"
+              :disabled="pageNum === '...' || loading"
+              @click="pageNum !== '...' && handlePageChange(pageNum)"
+            >
+              {{ pageNum }}
+            </button>
+            <button 
+              class="pagination-btn"
+              :disabled="!pagination.has_next || loading"
+              @click="handlePageChange(pagination.page + 1)"
+            >
+              下一页
+            </button>
           </div>
         </div>
       </div>
@@ -78,6 +111,9 @@
 </template>
 
 <script>
+import { getRanking } from '@/api/user'
+import { useAuthStore } from '@/stores/auth'
+
 export default {
   name: 'RankingList',
   data() {
@@ -88,68 +124,113 @@ export default {
         { key: 'rating', label: '评级' },
         { key: 'contest', label: '比赛' }
       ],
-       solvedRanking: [
-         {
-           id: 'U001',
-           name: '算法大师',
-           avatar: 'A',
-           solvedCount: 256,
-           slogan: '💪 代码虐我千百遍，我待代码如初恋！'
-         },
-         {
-           id: 'U002',
-           name: '代码狂人',
-           avatar: 'C',
-           solvedCount: 234,
-           slogan: '🔥 一天不刷题，浑身不舒服！'
-         },
-         {
-           id: 'U003',
-           name: '数据结构专家',
-           avatar: 'D',
-           solvedCount: 198,
-           slogan: '🌳 树是我的好朋友，链表是我的好兄弟！'
-         },
-         {
-           id: 'U004',
-           name: '编程新星',
-           avatar: 'P',
-           solvedCount: 187,
-           slogan: '⭐ 虽然我是新星，但我会成为超新星！'
-         },
-         {
-           id: 'U013',
-           name: '代码练习者',
-           avatar: 'C',
-           solvedCount: 65,
-           slogan: '📚 每天进步一点点，总有一天会逆袭！'
-         },
-         {
-           id: 'U014',
-           name: '编程入门者',
-           avatar: 'P',
-           solvedCount: 54,
-           slogan: '🎯 虽然菜，但我有梦想！'
-         },
-         {
-           id: 'U015',
-           name: '新手小白',
-           avatar: 'N',
-           solvedCount: 43,
-           slogan: '😅 小白也有大梦想，总有一天会变强！'
-         }
-       ]
+      solvedRanking: [],
+      loading: false,
+      pagination: {
+        page: 1,
+        page_size: 20,
+        total: 0,
+        total_pages: 0,
+        has_next: false,
+        has_previous: false
+      }
     }
   },
   computed: {
-    maxSolved() {
-      return this.solvedRanking.length > 0 ? this.solvedRanking[0].solvedCount : 1
+    authStore() {
+      return useAuthStore()
+    },
+    currentUserId() {
+      return this.authStore.userId || null
     }
   },
+  mounted() {
+    this.loadRanking()
+  },
   methods: {
+    async loadRanking() {
+      this.loading = true
+      try {
+        const params = {
+          page: this.pagination.page,
+          page_size: this.pagination.page_size
+        }
+        
+        const response = await getRanking(params)
+        
+        if (response.code === 'success' && response.data) {
+          this.solvedRanking = response.data.users || []
+          if (response.data.pagination) {
+            this.pagination = {
+              ...this.pagination,
+              ...response.data.pagination
+            }
+          }
+        } else {
+          this.$message?.error(response.message || '获取排行榜失败')
+          this.solvedRanking = []
+        }
+      } catch (error) {
+        console.error('获取排行榜失败:', error)
+        this.$message?.error(error.response?.data?.message || error.message || '获取排行榜失败，请稍后重试')
+        this.solvedRanking = []
+      } finally {
+        this.loading = false
+      }
+    },
     getMedal(index) {
       const medals = ['🥇', '🥈', '🥉']
       return medals[index] || ''
+    },
+    isCurrentUser(userId) {
+      return this.currentUserId && String(this.currentUserId) === String(userId)
+    },
+    handlePageChange(page) {
+      this.pagination.page = page
+      this.loadRanking()
+      // 滚动到顶部
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    },
+    // 生成页码数组（带省略号）
+    getPageNumbers() {
+      const current = this.pagination.page
+      const total = this.pagination.total_pages
+      const pages = []
+      
+      if (total <= 7) {
+        // 总页数少于等于7，显示所有页码
+        for (let i = 1; i <= total; i++) {
+          pages.push(i)
+        }
+      } else {
+        // 总页数大于7，显示部分页码和省略号
+        if (current <= 3) {
+          // 当前页在前3页
+          for (let i = 1; i <= 4; i++) {
+            pages.push(i)
+          }
+          pages.push('...')
+          pages.push(total)
+        } else if (current >= total - 2) {
+          // 当前页在后3页
+          pages.push(1)
+          pages.push('...')
+          for (let i = total - 3; i <= total; i++) {
+            pages.push(i)
+          }
+        } else {
+          // 当前页在中间
+          pages.push(1)
+          pages.push('...')
+          for (let i = current - 1; i <= current + 1; i++) {
+            pages.push(i)
+          }
+          pages.push('...')
+          pages.push(total)
+        }
+      }
+      
+      return pages
     }
   }
 }
@@ -225,7 +306,7 @@ export default {
 
 .table-header {
   display: grid;
-  grid-template-columns: 100px 1fr 150px 200px;
+  grid-template-columns: 100px 1fr 300px 150px;
   gap: 20px;
   padding: 10px 24px;
   background-color: #fafafa;
@@ -237,7 +318,7 @@ export default {
 
 .table-row {
   display: grid;
-  grid-template-columns: 100px 1fr 150px 200px;
+  grid-template-columns: 100px 1fr 300px 150px;
   gap: 20px;
   padding: 12px 24px;
   border-bottom: 1px solid #f0f0f0;
@@ -248,6 +329,16 @@ export default {
   background-color: #f8f9fa;
   transform: translateX(4px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.table-row.current-user {
+  background-color: #e6f7ff;
+  border-left: 4px solid #1890ff;
+  font-weight: 500;
+}
+
+.table-row.current-user:hover {
+  background-color: #bae7ff;
 }
 
 .table-row:last-child {
@@ -308,9 +399,28 @@ export default {
   color: #333333;
 }
 
+.user-real-name {
+  font-size: 12px;
+  color: #666666;
+}
+
 .user-id {
   font-size: 12px;
   color: #999999;
+}
+
+.col-motto {
+  display: flex;
+  align-items: center;
+}
+
+.motto-text {
+  font-size: 14px;
+  color: #666666;
+  font-style: italic;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .col-solved {
@@ -330,24 +440,14 @@ export default {
   color: #666666;
 }
 
-.col-progress {
-  display: flex;
-  align-items: center;
+.loading-state {
+  padding: 60px 20px;
+  text-align: center;
 }
 
-.progress-bar {
-  width: 100%;
-  height: 8px;
-  background-color: #f0f0f0;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #52c41a 0%, #73d13d 100%);
-  border-radius: 4px;
-  transition: width 0.3s ease;
+.loading-text {
+  font-size: 18px;
+  color: #666666;
 }
 
 .empty-state {
@@ -381,10 +481,82 @@ export default {
   color: #666666;
 }
 
+/* 翻页器样式 */
+.pagination-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-top: 1px solid #f0f0f0;
+  background-color: #fafafa;
+}
+
+.pagination-info {
+  display: flex;
+  gap: 16px;
+  font-size: 14px;
+  color: #666666;
+}
+
+.page-info {
+  color: #999999;
+}
+
+.pagination {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.pagination-btn {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  background-color: #ffffff;
+  color: #333333;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  border-color: #1890ff;
+  color: #1890ff;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-number {
+  min-width: 36px;
+}
+
+.pagination-number.active {
+  background-color: #1890ff;
+  border-color: #1890ff;
+  color: #ffffff;
+}
+
+.pagination-number.disabled {
+  cursor: default;
+  border: none;
+  background: transparent;
+}
+
+.pagination-number.disabled:hover {
+  border: none;
+  color: #333333;
+}
+
 @media (max-width: 768px) {
   .table-header,
   .table-row {
-    grid-template-columns: 80px 1fr 100px 120px;
+    grid-template-columns: 80px 1fr 200px 100px;
     gap: 12px;
     padding: 12px;
   }
@@ -405,6 +577,16 @@ export default {
 
   .solved-count {
     font-size: 20px;
+  }
+
+  .pagination-container {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .pagination {
+    flex-wrap: wrap;
+    justify-content: center;
   }
 }
 </style>

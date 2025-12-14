@@ -68,3 +68,7 @@ export const resetUserPassword = (userId, newPassword) =>
     new_password: newPassword
   })
 
+// 获取排行榜
+export const getRanking = (params = {}) =>
+  http.get('/users/ranking', { params })
+
