@@ -1,10 +1,6 @@
 <template>
   <div class="submission-list">
     <div class="submission-list-container">
-      <div class="page-header">
-        <h1>提交记录</h1>
-        <p class="subtitle">查看所有用户的提交记录</p>
-      </div>
 
       <!-- 筛选栏 -->
       <div class="filter-bar">

@@ -87,7 +87,12 @@
 
         <!-- 提交代码板块 -->
         <div class="code-section">
-          <h2 class="section-title">提交代码</h2>
+          <div class="code-header">
+            <h2 class="section-title">提交代码</h2>
+            <button class="btn-copy" @click="copyCode" title="复制提交代码">
+              📋 复制代码
+            </button>
+          </div>
           <div class="code-container">
             <pre class="code-content">{{ submission.code }}</pre>
           </div>
@@ -203,6 +208,25 @@ export default {
         6: 'test-status-system-error'
       }
       return statusMap[result] || 'test-status-unknown'
+    },
+    async copyCode() {
+      if (!this.submission || !this.submission.code) {
+        this.$message?.warning && this.$message.warning('暂无可复制的代码')
+        return
+      }
+      const code = this.submission.code
+      try {
+        if (!navigator.clipboard || !navigator.clipboard.writeText) {
+          this.$message?.warning && this.$message.warning('当前浏览器不支持自动复制，请手动选择代码复制')
+          return
+        }
+
+        await navigator.clipboard.writeText(code)
+        this.$message?.success && this.$message.success('代码已复制到剪贴板')
+      } catch (error) {
+        console.error('复制代码失败:', error)
+        this.$message?.error && this.$message.error('复制失败，请手动选择代码复制')
+      }
     },
     goBack() {
       this.$router.go(-1)
@@ -467,6 +491,39 @@ export default {
   color: #abb2bf;
   white-space: pre;
   word-wrap: normal;
+}
+
+/* 复制代码按钮（与题目详情页样例复制按钮保持一致风格） */
+.code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.btn-copy {
+  padding: 4px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  background-color: #ffffff;
+  color: #666666;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  outline: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-copy:hover {
+  border-color: #1890ff;
+  color: #1890ff;
+  background-color: #f0f7ff;
+}
+
+.btn-copy:active {
+  transform: scale(0.95);
 }
 
 /* 按钮 */
