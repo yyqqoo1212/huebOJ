@@ -221,6 +221,11 @@ const routes = [
             path: 'edit/:id',
             name: 'ContestEdit',
             component: () => import('../views/admin/contests/ContestCreate.vue')
+          },
+          {
+            path: 'problems/:id',
+            name: 'ContestProblemManage',
+            component: () => import('../views/admin/contests/ContestProblemManage.vue')
           }
         ]
       },

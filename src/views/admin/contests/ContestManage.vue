@@ -231,6 +231,7 @@
       @cancel="closeDeleteAnnouncementModal"
       @update:visible="showDeleteAnnouncementModal = $event"
     />
+
   </div>
 </template>
 
@@ -434,9 +435,7 @@ export default {
       this.$router.push(`/admin/contests/edit/${contest.id}`)
     },
     handleEditProblems(contest) {
-      if (this.$message?.info) {
-        this.$message.info(`题目编辑功能待接入：${contest.id}`)
-      }
+      this.$router.push(`/admin/contests/problems/${contest.id}`)
     },
     async handleViewAnnouncements(contest) {
       this.currentContestId = contest.id

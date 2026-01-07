@@ -108,3 +108,58 @@ export const deleteContestAnnouncement = (contestId, announcementId) => {
   return http.delete(`/contests/${contestId}/announcements/${announcementId}/delete`)
 }
 
+/**
+ * 获取比赛题目列表
+ * @param {number} contestId - 比赛ID
+ * @returns {Promise}
+ */
+export const getContestProblems = (contestId) => {
+  return http.get(`/contests/${contestId}/problems`)
+}
+
+/**
+ * 获取题库列表（用于比赛添加题目）
+ * @param {Object} params - 查询参数
+ * @param {number} params.page - 页码（默认1）
+ * @param {number} params.page_size - 每页数量（默认10）
+ * @param {string} params.search - 搜索关键词（题号或标题）
+ * @returns {Promise}
+ */
+export const getProblemBank = (params = {}) => {
+  return http.get('/contests/problem-bank', { params })
+}
+
+/**
+ * 添加题目到比赛
+ * @param {number} contestId - 比赛ID
+ * @param {Object} data - 题目数据
+ * @param {number} data.problem_id - 题目ID
+ * @param {string} data.display_title - 显示标题（可选）
+ * @returns {Promise}
+ */
+export const addProblemToContest = (contestId, data) => {
+  return http.post(`/contests/${contestId}/problems/add`, data)
+}
+
+/**
+ * 删除比赛题目关联
+ * @param {number} contestId - 比赛ID
+ * @param {number} problemRelationId - 题目关联ID
+ * @returns {Promise}
+ */
+export const deleteContestProblem = (contestId, problemRelationId) => {
+  return http.delete(`/contests/${contestId}/problems/${problemRelationId}/delete`)
+}
+
+/**
+ * 更新比赛题目气球颜色
+ * @param {number} contestId - 比赛ID
+ * @param {number} problemRelationId - 题目关联ID
+ * @param {Object} data - 颜色数据
+ * @param {string} data.color - 颜色值（如 #FF0000）
+ * @returns {Promise}
+ */
+export const updateContestProblemColor = (contestId, problemRelationId, data) => {
+  return http.put(`/contests/${contestId}/problems/${problemRelationId}/color`, data)
+}
+

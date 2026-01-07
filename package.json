@@ -13,6 +13,7 @@
     "@bytemd/plugin-highlight": "^1.22.0",
     "@bytemd/plugin-math": "^1.22.0",
     "@bytemd/vue-next": "^1.22.0",
+    "@ckpack/vue-color": "^1.6.0",
     "@codemirror/autocomplete": "^6.20.0",
     "@codemirror/basic-setup": "^0.20.0",
     "@codemirror/commands": "^6.10.0",
