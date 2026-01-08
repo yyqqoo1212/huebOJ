@@ -277,7 +277,8 @@ export default {
       try {
         const res = await getProblemList({
           page,
-          page_size: this.pagination.page_size
+          page_size: this.pagination.page_size,
+          auth: '1,2,3'
         })
         this.problems = res.data?.problems || []
         this.pagination = {

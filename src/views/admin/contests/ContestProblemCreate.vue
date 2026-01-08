@@ -20,6 +20,16 @@
             />
           </div>
           <div class="form-item">
+            <label>比赛题目标题</label>
+            <input
+              v-model="form.display_title"
+              type="text"
+              placeholder="请输入比赛题目标题"
+              ref="displayTitleInput"
+              :class="{ 'input-error': fieldErrors.display_title }"
+            />
+          </div>
+          <div class="form-item">
             <label>难度等级 *</label>
             <select
               v-model.number="form.level"
@@ -337,6 +347,7 @@
 
 <script>
 import { createProblem } from '@/api/problem'
+import { addProblemToContest } from '@/api/contest'
 import { userStorage } from '@/utils/storage'
 import MarkdownIt from 'markdown-it'
 import katex from 'katex'
@@ -347,8 +358,10 @@ export default {
   data() {
     return {
       md: null, // Markdown 渲染器实例
+      contestId: null, // 比赛ID（从路由参数获取）
       form: {
         title: '',
+        display_title: '',
         content: '',
         score: 100,
         time_limit: 1000,
@@ -360,7 +373,7 @@ export default {
         output_demo: '',
         hint: '',
         tag: '',
-        auth: 1,
+        auth: 3,
         samples: [
           { input: '', output: '' }
         ],
@@ -377,6 +390,7 @@ export default {
       extractedToken: '',
       fieldErrors: {
         title: false,
+        display_title: false,
         content: false,
         input_description: false,
         output_description: false,
@@ -399,6 +413,13 @@ export default {
       linkify: true, // 自动识别链接
       breaks: true // 将换行符转换为 <br>
     })
+  },
+  mounted() {
+    // 从路由参数获取比赛ID
+    const contestId = this.$route.query.contest_id
+    if (contestId) {
+      this.contestId = contestId
+    }
   },
   methods: {
     // 渲染 Markdown 和 LaTeX 内容（与 Detail.vue 保持一致）
@@ -624,6 +645,7 @@ export default {
       // 重置错误状态和状态提示
       this.fieldErrors = {
         title: false,
+        display_title: false,
         content: false,
         input_description: false,
         output_description: false,
@@ -710,7 +732,9 @@ export default {
         output_description: this.form.output_description,
         input_demo,
         output_demo,
-        hint: this.form.hint
+        hint: this.form.hint,
+
+        display_title: this.form.display_title,
       }
 
       this.saving = true
@@ -719,7 +743,25 @@ export default {
         const response = await createProblem(payload)
         const problemId = response.data?.problem_id
 
-        // 准备异步上传测评数据，避免阻塞“保存题目”反馈
+        if (!problemId) {
+          return showError('创建题目失败，未返回题目ID')
+        }
+
+        // 如果有比赛ID，将题目添加到比赛中
+        if (this.contestId) {
+          try {
+            await addProblemToContest(this.contestId, {
+              problem_id: problemId,
+              display_title: this.form.display_title || this.form.title
+            })
+          } catch (contestError) {
+            console.error('添加题目到比赛失败:', contestError)
+            // 即使添加到比赛失败，也不影响题目创建成功
+            this.showFeedback('warning', '题目创建成功，但添加到比赛失败，请稍后手动添加')
+          }
+        }
+
+        // 准备异步上传测评数据，避免阻塞"保存题目"反馈
         let uploadPromise = null
         if (problemId) {
           if (this.testcaseUploadMode === 'manual' && this.form.testcases.length > 0) {
@@ -812,6 +854,7 @@ export default {
         output_demo: '',
         hint: '',
         tag: '',
+        score: 100,
         auth: 1,
         samples: [
           { input: '', output: '' }

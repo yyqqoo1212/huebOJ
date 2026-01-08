@@ -303,10 +303,11 @@ export default {
       this.$router.push('/admin/contests/manage')
     },
     handleCreateProblem() {
-      // 按钮逻辑暂时不管
-      if (this.$message?.info) {
-        this.$message.info('创建题目功能待实现')
-      }
+      // 传递比赛ID到创建页面
+      this.$router.push({
+        path: '/admin/contests/problem/create',
+        query: { contest_id: this.contestId }
+      })
     },
     async handleAddFromBank() {
       this.showProblemBankModal = true

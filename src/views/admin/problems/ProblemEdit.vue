@@ -523,7 +523,8 @@ export default {
         this.form.time_limit = data.time_limit || 1000
         this.form.memory_limit = data.memory_limit || 256
         this.form.level = data.difficulty || 1
-        this.form.auth = data.auth || 1
+        // 确保 auth 字段正确赋值（1=公开, 2=私密, 3=比赛）
+        this.form.auth = (data.auth !== undefined && data.auth !== null) ? Number(data.auth) : 1
         this.form.score = data.score || 100
         this.form.tag = (data.tags || []).join('|') || ''
         
