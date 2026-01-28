@@ -2,19 +2,24 @@
   <div class="contest-problems">
     <div class="problems-container">
       <div class="problems-card">
-        <h2 class="card-title">题目列表</h2>
-        <div v-if="problems.length > 0" class="problems-list">
+        <div v-if="loading" class="loading-state">
+          <p>正在加载题目列表...</p>
+        </div>
+        <div v-else-if="error" class="error-state">
+          <p>{{ error }}</p>
+        </div>
+        <div v-else-if="problems.length > 0" class="problems-list">
           <div 
             v-for="problem in problems" 
             :key="problem.id"
             class="problem-item"
-            @click="goToProblem(problem.id)"
+            @click="goToProblem(problem)"
           >
-            <div class="problem-id">{{ problem.id }}</div>
-            <div class="problem-title">{{ problem.title }}</div>
+            <div class="problem-id">{{ problem.display_order }}</div>
+            <div class="problem-title">{{ problem.display_title }}</div>
             <div class="problem-stats">
-              <span class="stat-item">通过: {{ problem.accepted }}</span>
-              <span class="stat-item">提交: {{ problem.submitted }}</span>
+              <span class="stat-item">通过: {{ problem.accept_count }}</span>
+              <span class="stat-item">提交: {{ problem.submit_count }}</span>
             </div>
           </div>
         </div>
@@ -29,20 +34,51 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { getContestProblems } from '@/api/contest'
 
 const route = useRoute()
 const router = useRouter()
 const problems = ref([])
+const loading = ref(false)
+const error = ref('')
 
-const goToProblem = (problemId) => {
+const goToProblem = (item) => {
   const contestId = route.params.id
-  router.push(`/contests/${contestId}/problems/${problemId}`)
+  const pid = item.problem_id ?? item.id
+  if (!pid) return
+  router.push(`/contests/${contestId}/problems/${pid}`)
+}
+
+const fetchProblems = async () => {
+  const contestId = route.params.id
+  if (!contestId) {
+    error.value = '比赛ID无效'
+    return
+  }
+
+  loading.value = true
+  error.value = ''
+  
+  try {
+    const response = await getContestProblems(contestId)
+    
+    if (response.code === 'success' && response.data) {
+      problems.value = response.data.problems || []
+    } else {
+      error.value = response.message || '获取题目列表失败'
+      problems.value = []
+    }
+  } catch (err) {
+    console.error('获取题目列表失败:', err)
+    error.value = err.message || '获取题目列表失败，请稍后重试'
+    problems.value = []
+  } finally {
+    loading.value = false
+  }
 }
 
 onMounted(() => {
-  // TODO: 从API获取题目列表
-  // const contestId = route.params.id
-  problems.value = []
+  fetchProblems()
 })
 </script>
 
@@ -74,13 +110,13 @@ onMounted(() => {
 .problems-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .problem-item {
   display: flex;
   align-items: center;
-  padding: 16px 20px;
+  padding: 8px 15px;
   border: 1px solid #e8e8e8;
   border-radius: 6px;
   cursor: pointer;
@@ -96,15 +132,15 @@ onMounted(() => {
 }
 
 .problem-id {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: #1890ff;
-  min-width: 60px;
+  min-width: 50px;
 }
 
 .problem-title {
   flex: 1;
-  font-size: 16px;
+  font-size: 15px;
   color: #333333;
   font-weight: 500;
 }
@@ -112,7 +148,7 @@ onMounted(() => {
 .problem-stats {
   display: flex;
   gap: 20px;
-  font-size: 14px;
+  font-size: 13px;
   color: #666666;
 }
 
@@ -120,10 +156,20 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-.empty-state {
+.empty-state,
+.loading-state,
+.error-state {
   padding: 60px 20px;
   text-align: center;
   color: #999999;
+}
+
+.error-state {
+  color: #ff4d4f;
+}
+
+.loading-state {
+  color: #1890ff;
 }
 </style>
 

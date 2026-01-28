@@ -53,7 +53,7 @@ const navItems = computed(() => {
   align-items: center;
   padding: 0 20px;
   height: 50px;
-  gap: 8px;
+  gap: 36px;
 }
 
 .sub-nav-item {
@@ -95,6 +95,7 @@ const navItems = computed(() => {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    gap: 10px;
   }
   
   .sub-nav-container::-webkit-scrollbar {

@@ -118,6 +118,16 @@ export const getContestProblems = (contestId) => {
 }
 
 /**
+ * 获取比赛题目详情（带比赛显示信息）
+ * @param {number} contestId - 比赛ID
+ * @param {number} problemId - 题目ID（题库 problem_id）
+ * @returns {Promise}
+ */
+export const getContestProblemDetail = (contestId, problemId) => {
+  return http.get(`/contests/${contestId}/problems/${problemId}`)
+}
+
+/**
  * 获取题库列表（用于比赛添加题目）
  * @param {Object} params - 查询参数
  * @param {number} params.page - 页码（默认1）

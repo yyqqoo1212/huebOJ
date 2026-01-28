@@ -10,6 +10,7 @@ import ContestProblems from '../views/contest/Problems.vue'
 import ContestSubmissions from '../views/contest/Submissions.vue'
 import ContestRanking from '../views/contest/Ranking.vue'
 import ContestAnnouncements from '../views/contest/Announcements.vue'
+import ContestProblemDetail from '../views/contest/ProblemDetail.vue'
 import RankingList from '../views/rank/RankingList.vue'
 import SubmissionList from '../views/submission/SubmissionList.vue'
 import SubmissionDetail from '../views/submission/Detail.vue'
@@ -93,6 +94,11 @@ const routes = [
         path: 'problems',
         name: 'ContestProblems',
         component: ContestProblems
+      },
+      {
+        path: 'problems/:problemId',
+        name: 'ContestProblemDetail',
+        component: ContestProblemDetail
       },
       {
         path: 'submissions',
