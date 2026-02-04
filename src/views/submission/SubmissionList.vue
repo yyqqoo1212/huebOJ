@@ -283,6 +283,10 @@ export default {
           page_size: this.pagination.page_size
         }
 
+        // 只展示公开题目的提交记录（1=公开, 2=私密, 3=比赛）
+        // 后端会根据 auth 参数过滤 problem.auth，确保列表中不包含私密题目和比赛题目的提交
+        params.auth = 1
+
         // 添加筛选参数
         if (this.filters.problem_id && this.filters.problem_id.trim()) {
           const problemId = parseInt(this.filters.problem_id.trim())

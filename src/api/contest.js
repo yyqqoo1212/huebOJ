@@ -173,3 +173,19 @@ export const updateContestProblemColor = (contestId, problemRelationId, data) =>
   return http.put(`/contests/${contestId}/problems/${problemRelationId}/color`, data)
 }
 
+/**
+ * 获取比赛中题目的提交记录
+ * @param {number} contestId - 比赛ID
+ * @param {Object} params - 查询参数
+ * @param {number} params.page - 页码（默认1）
+ * @param {number} params.page_size - 每页数量（默认20）
+ * @param {number} params.problem_id - 题库题目ID筛选（可选）
+ * @param {number} params.user_id - 用户ID筛选（可选）
+ * @param {number} params.status - 状态筛选（可选）
+ * @param {string} params.language - 语言筛选（可选）
+ * @returns {Promise}
+ */
+export const getContestSubmissions = (contestId, params = {}) => {
+  return http.get(`/contests/${contestId}/submissions`, { params })
+}
+
