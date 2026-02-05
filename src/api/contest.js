@@ -174,6 +174,25 @@ export const updateContestProblemColor = (contestId, problemRelationId, data) =>
 }
 
 /**
+ * 查询当前用户的比赛报名信息
+ * @param {number} contestId - 比赛ID
+ * @returns {Promise}
+ */
+export const getContestRegistration = (contestId) => {
+  return http.get(`/contests/${contestId}/registration`)
+}
+
+/**
+ * 报名比赛
+ * @param {number} contestId - 比赛ID
+ * @param {Object} data - 报名信息（real_name、student_id、school、phone、email、is_star）
+ * @returns {Promise}
+ */
+export const registerContest = (contestId, data = {}) => {
+  return http.post(`/contests/${contestId}/registration/apply`, data)
+}
+
+/**
  * 获取比赛中题目的提交记录
  * @param {number} contestId - 比赛ID
  * @param {Object} params - 查询参数
