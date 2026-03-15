@@ -1251,6 +1251,88 @@ export default {
   cursor: not-allowed;
 }
 
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-card {
+  width: min(420px, 90vw);
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.35);
+}
+
+.modal-card h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  color: #111827;
+}
+
+.modal-card p {
+  margin: 4px 0 16px;
+  color: #4b5563;
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.modal-cancel,
+.modal-confirm {
+  padding: 8px 18px;
+  border-radius: 999px;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.modal-cancel {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.modal-cancel:hover:not(:disabled) {
+  background: #e5e7eb;
+}
+
+.modal-confirm {
+  background: #1890ff;
+  color: #fff;
+}
+
+.modal-confirm:hover:not(:disabled) {
+  background: #1677d9;
+}
+
+.modal-confirm:disabled,
+.modal-cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
 .batch-delete-list {
   max-height: 200px;
   overflow-y: auto;
