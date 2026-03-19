@@ -122,7 +122,9 @@ export const runTest = (problemId, data) => {
 export const submitCode = (problemId, data) => {
   return http.post(`/problems/${problemId}/submit`, {
     code: data.code,
-    language: data.language
+    language: data.language,
+    // 比赛提交时透传 contest_id（不传则视为普通练习提交）
+    ...(data.contest_id ? { contest_id: data.contest_id } : {})
   })
 }
 

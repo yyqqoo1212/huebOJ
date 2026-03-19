@@ -556,7 +556,8 @@ async function handleSubmit() {
   try {
     const resp = await submitCode(realProblemId.value, {
       code,
-      language: selectedLanguage.value
+      language: selectedLanguage.value,
+      contest_id: Number(contestId.value)
     })
     if (resp.code === 'success' && resp.data) {
       submissionId.value = resp.data.submission_id

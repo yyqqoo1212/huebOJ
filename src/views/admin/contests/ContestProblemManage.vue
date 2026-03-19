@@ -420,10 +420,14 @@ export default {
       }
     },
     handleEditProblem(problem) {
-      // 修改逻辑暂时不涉及
-      if (this.$message?.info) {
-        this.$message.info(`修改题目功能待实现：${problem.display_title}`)
+      // 跳转到题库题目编辑页（编辑的是原题目内容）
+      // 注意：比赛题目列表中 problem.problem_id 是题库 Problem 的主键（problem_id）
+      const problemId = problem?.problem_id
+      if (!problemId) {
+        if (this.$message?.error) this.$message.error('题目ID缺失，无法跳转编辑')
+        return
       }
+      this.$router.push(`/admin/problems/edit/${problemId}`)
     },
     handleDeleteProblem(problem) {
       this.deleteTarget = problem
