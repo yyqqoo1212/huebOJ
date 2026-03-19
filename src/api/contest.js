@@ -208,3 +208,12 @@ export const getContestSubmissions = (contestId, params = {}) => {
   return http.get(`/contests/${contestId}/submissions`, { params })
 }
 
+/**
+ * 获取比赛排行榜（IOI）
+ * @param {number} contestId - 比赛ID
+ * @returns {Promise}
+ */
+export const getContestRankings = (contestId) => {
+  return http.get(`/contests/${contestId}/rankings`)
+}
+
