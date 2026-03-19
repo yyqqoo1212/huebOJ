@@ -224,6 +224,9 @@
 
       <section class="form-section">
         <h2>测评数据</h2>
+        <p class="testcase-count-hint" v-if="testcaseCount > 0">
+          当前测评数据组数：<strong>{{ testcaseCount }}</strong>
+        </p>
         <div class="testcase-upload-mode">
           <label class="mode-option">
             <input
@@ -388,6 +391,7 @@ export default {
       extractError: '',
       extractedFiles: [],
       extractedToken: '',
+      testcaseCount: 0,
       fieldErrors: {
         title: false,
         display_title: false,
@@ -529,10 +533,12 @@ export default {
     },
     addTestcase() {
       this.form.testcases.push({ input: '', output: '' })
+      this.updateTestcaseCount()
     },
     removeTestcase(index) {
       if (this.form.testcases.length === 1) return
       this.form.testcases.splice(index, 1)
+      this.updateTestcaseCount()
     },
     handleZipFileChange(event) {
       const file = event.target.files?.[0]
@@ -574,6 +580,7 @@ export default {
         if (response.valid) {
           this.extractedFiles = response.files || []
           this.extractedToken = response.token || ''
+          this.testcaseCount = this.computeAutoTestcaseCount(this.extractedFiles)
         } else {
           this.extractError = response.message || '压缩包不符合规范'
           this.zipFile = null
@@ -718,6 +725,19 @@ export default {
         }
       }
 
+      // 计算测评数据组数
+      let testcaseCount = 0
+      if (this.testcaseUploadMode === 'manual') {
+        const testcasesSnapshot = this.form.testcases.map(tc => ({
+          input: tc.input || '',
+          output: tc.output || ''
+        }))
+        testcaseCount = this.computeManualTestcaseCount(testcasesSnapshot)
+      } else if (this.testcaseUploadMode === 'auto') {
+        testcaseCount = this.computeAutoTestcaseCount(this.extractedFiles || [])
+      }
+      this.testcaseCount = testcaseCount
+
       const payload = {
         author,
         title: this.form.title,
@@ -733,6 +753,7 @@ export default {
         input_demo,
         output_demo,
         hint: this.form.hint,
+        testcase_count: testcaseCount,
 
         display_title: this.form.display_title,
       }
@@ -824,6 +845,53 @@ export default {
         await uploadTestcaseFiles(problemId, files)
       }
     },
+    computeManualTestcaseCount(testcases) {
+      let count = 0
+      testcases.forEach((testcase) => {
+        const hasInput = (testcase.input || '').trim().length > 0
+        const hasOutput = (testcase.output || '').trim().length > 0
+        if (hasInput || hasOutput) {
+          count += 1
+        }
+      })
+      return count
+    },
+    computeAutoTestcaseCount(files) {
+      if (!files || !files.length) return 0
+      const ins = new Set()
+      const outs = new Set()
+      files.forEach((name) => {
+        if (!name) return
+        const parts = String(name).split('/')
+        const base = parts[parts.length - 1] || ''
+        const dotIndex = base.lastIndexOf('.')
+        if (dotIndex === -1) return
+        const stem = base.slice(0, dotIndex)
+        const ext = base.slice(dotIndex).toLowerCase()
+        if (!stem) return
+        if (ext === '.in') {
+          ins.add(stem)
+        } else if (ext === '.out') {
+          outs.add(stem)
+        }
+      })
+      let count = 0
+      ins.forEach((stem) => {
+        if (outs.has(stem)) count += 1
+      })
+      return count
+    },
+    updateTestcaseCount() {
+      if (this.testcaseUploadMode === 'manual') {
+        const testcasesSnapshot = this.form.testcases.map(tc => ({
+          input: tc.input || '',
+          output: tc.output || ''
+        }))
+        this.testcaseCount = this.computeManualTestcaseCount(testcasesSnapshot)
+      } else if (this.testcaseUploadMode === 'auto') {
+        this.testcaseCount = this.computeAutoTestcaseCount(this.extractedFiles || [])
+      }
+    },
     async uploadAutoTestcases(problemId, token) {
       const { uploadExtractedTestcases } = await import('@/api/problem')
       await uploadExtractedTestcases(problemId, token)
@@ -870,6 +938,7 @@ export default {
       this.extractProgress = 0
       this.extractError = ''
       this.extractedFiles = []
+      this.testcaseCount = 0
       if (this.$refs.zipFileInput) {
         this.$refs.zipFileInput.value = ''
       }
