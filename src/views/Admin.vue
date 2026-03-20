@@ -90,7 +90,6 @@ export default {
             { path: '/admin/problems/package', label: '题目打包', icon: '📦' }
           ]
         },
-        { path: '/admin/courses', label: '课程管理', icon: '📖' },
         { 
           path: '/admin/contests', 
           label: '比赛管理', 

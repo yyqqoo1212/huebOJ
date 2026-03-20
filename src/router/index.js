@@ -2,7 +2,6 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
 import ProblemList from '../views/problem/ProblemList.vue'
 import ProblemDetail from '../views/problem/Detail.vue'
-import CourseList from '../views/course/CourseList.vue'
 import ContestList from '../views/contest/ContestList.vue'
 import ContestDetail from '../views/contest/Detail.vue'
 import ContestDescription from '../views/contest/Description.vue'
@@ -26,7 +25,6 @@ import GeneralSettings from '../views/admin/GeneralSettings.vue'
 import UserManagement from '../views/admin/general/UserManagement.vue'
 import AnnouncementManagement from '../views/admin/general/AnnouncementManagement.vue'
 import ProblemManagement from '../views/admin/ProblemManagement.vue'
-import CourseManagement from '../views/admin/CourseManagement.vue'
 import ContestManagement from '../views/admin/ContestManagement.vue'
 import DiscussionManagement from '../views/admin/DiscussionManagement.vue'
 import { setupRouterGuards } from './guards'
@@ -68,11 +66,6 @@ const routes = [
     name: 'ProblemSubmissionHistory',
     component: ProblemSubmissionHistory,
     meta: { requiresAuth: true }
-  },
-  {
-    path: '/courses',
-    name: 'CourseList',
-    component: CourseList
   },
   {
     path: '/contests',
@@ -201,11 +194,6 @@ const routes = [
             component: () => import('../views/admin/problems/ProblemPackage.vue')
           }
         ]
-      },
-      {
-        path: 'courses',
-        name: 'CourseManagement',
-        component: CourseManagement
       },
       {
         path: 'contests',

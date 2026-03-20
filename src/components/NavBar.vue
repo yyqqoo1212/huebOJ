@@ -7,7 +7,6 @@
         </router-link>
         <router-link to="/" class="nav-item">首页</router-link>
         <router-link to="/problems" class="nav-item">题库</router-link>
-        <router-link to="/courses" class="nav-item">课程</router-link>
         <router-link to="/contests" class="nav-item">比赛</router-link>
         <router-link to="/submissions" class="nav-item">提交记录</router-link>
         <router-link to="/ranking" class="nav-item">排行榜</router-link>
