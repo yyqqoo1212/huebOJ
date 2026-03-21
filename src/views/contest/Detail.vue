@@ -6,13 +6,31 @@
       <router-view />
     </div>
 
-    <!-- 报名弹窗 -->
+    <!-- 提示弹窗（报名截止、权限拒绝等） -->
+    <div v-if="promptMessage" class="register-overlay">
+      <div class="register-dialog prompt-dialog">
+        <div class="prompt-icon">⚠️</div>
+        <h3 class="dialog-title">提示</h3>
+        <p class="dialog-desc">{{ promptMessage }}</p>
+        <div class="dialog-actions">
+          <button class="btn-primary" @click="handlePromptClose">返回比赛列表</button>
+        </div>
+      </div>
+    </div>
+
     <div v-if="showRegisterDialog" class="register-overlay">
       <div class="register-dialog">
-        <h3 class="dialog-title">比赛报名</h3>
-        <p class="dialog-desc">进入比赛前请先完成报名信息</p>
+        <h3 class="dialog-title">{{ dialogStep === 'password' ? '私有赛验证' : '比赛报名' }}</h3>
+        <p class="dialog-desc">{{ dialogStep === 'password' ? '该比赛为私有赛，请先输入比赛密码' : '进入比赛前请先完成报名信息' }}</p>
 
-        <div class="form-grid">
+        <div v-if="dialogStep === 'password'" class="form-grid">
+          <label class="form-item">
+            <span class="label">比赛密码</span>
+            <input v-model="passwordForm.password" type="password" placeholder="请输入比赛密码" />
+          </label>
+        </div>
+
+        <div v-else class="form-grid">
           <label class="form-item">
             <span class="label">真实姓名</span>
             <input v-model="form.real_name" type="text" placeholder="可选" />
@@ -39,14 +57,23 @@
           </label>
         </div>
 
-        <div v-if="submitError" class="error-text">{{ submitError }}</div>
+        <div v-if="dialogStep === 'password' && passwordError" class="error-text">{{ passwordError }}</div>
+        <div v-if="dialogStep !== 'password' && submitError" class="error-text">{{ submitError }}</div>
 
         <div class="dialog-actions">
-          <button class="btn-ghost" :disabled="submitting" @click="handleCancel">
+          <button
+            class="btn-ghost"
+            :disabled="dialogStep === 'password' ? passwordSubmitting : submitting"
+            @click="handleCancel"
+          >
             取消
           </button>
-          <button class="btn-primary" :disabled="submitting" @click="handleSubmit">
-            {{ submitting ? '提交中...' : '提交报名' }}
+          <button
+            class="btn-primary"
+            :disabled="dialogStep === 'password' ? passwordSubmitting : submitting"
+            @click="dialogStep === 'password' ? handlePasswordSubmit() : handleSubmit()"
+          >
+            {{ dialogStep === 'password' ? (passwordSubmitting ? '验证中...' : '验证密码') : (submitting ? '提交中...' : '提交报名') }}
           </button>
         </div>
       </div>
@@ -59,14 +86,19 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ContestHeader from '@/components/ContestHeader.vue'
 import ContestSubNav from '@/components/ContestSubNav.vue'
-import { getContestRegistration, registerContest } from '@/api/contest'
+import { getContestDetail, getContestRegistration, registerContest, verifyContestPassword } from '@/api/contest'
 
 const route = useRoute()
 const router = useRouter()
 
 const showRegisterDialog = ref(false)
+const promptMessage = ref('')
+const dialogStep = ref('register')
 const submitting = ref(false)
 const submitError = ref(null)
+const passwordSubmitting = ref(false)
+const passwordError = ref(null)
+const passwordForm = ref({ password: '' })
 const form = ref({
   real_name: '',
   student_id: '',
@@ -80,16 +112,81 @@ const checkRegistration = async () => {
   const contestId = route.params.id
   if (!contestId) return
   try {
+    const detailRes = await getContestDetail(contestId)
+    const contestData = detailRes?.data || {}
+    const contestStatus = contestData?.status
+    const contestMode = String(contestData?.rule_config?.contest_mode || '').toLowerCase()
+    const isPrivateContest = contestMode === '私有赛' || contestMode === 'private' || contestMode === 'private_contest'
+    const registerEndTimeRaw = contestData?.time_config?.register_end_time
+    const registerEndTime = registerEndTimeRaw ? new Date(registerEndTimeRaw) : null
+    const registerClosedBeforeEnd = (
+      contestStatus !== '已结束' &&
+      registerEndTime instanceof Date &&
+      !Number.isNaN(registerEndTime.getTime()) &&
+      Date.now() > registerEndTime.getTime()
+    )
+
+    if (isPrivateContest) {
+      // 私有赛默认先走密码阶段，后端会在已验证时放行并返回报名信息
+      dialogStep.value = 'password'
+    }
+
     const res = await getContestRegistration(contestId)
     if (res.code === 'success' && res.data) {
-      showRegisterDialog.value = !res.data.registered
+      dialogStep.value = 'register'
+      const registered = Boolean(res.data.registered)
+      if (!registered && registerClosedBeforeEnd) {
+        showRegisterDialog.value = false
+        promptMessage.value = '报名已截止，未报名用户在比赛结束前不可进入比赛'
+        return
+      }
+      showRegisterDialog.value = !registered
     } else {
       showRegisterDialog.value = true
     }
   } catch (error) {
     console.error('检查报名状态失败:', error)
-    // 如果接口异常，为确保流程，仍然弹出报名
-    showRegisterDialog.value = true
+    const status = error?.response?.status
+    const code = error?.response?.data?.code
+    if (status === 403 && code === 'contest_password_required') {
+      showRegisterDialog.value = true
+      dialogStep.value = 'password'
+      passwordError.value = null
+      return
+    }
+    if (status === 403) {
+      showRegisterDialog.value = false
+      promptMessage.value = error?.response?.data?.message || '当前不可进入比赛'
+    } else {
+      // 如果接口异常，为确保流程，仍然弹出报名
+      showRegisterDialog.value = true
+    }
+  }
+}
+
+const handlePasswordSubmit = async () => {
+  const contestId = route.params.id
+  if (!contestId) return
+  passwordError.value = null
+  const password = (passwordForm.value.password || '').trim()
+  if (!password) {
+    passwordError.value = '请输入比赛密码'
+    return
+  }
+  passwordSubmitting.value = true
+  try {
+    const res = await verifyContestPassword(contestId, { password })
+    if (res.code === 'success') {
+      dialogStep.value = 'register'
+      passwordForm.value.password = ''
+      await checkRegistration()
+    } else {
+      passwordError.value = res.message || '密码验证失败'
+    }
+  } catch (error) {
+    passwordError.value = error?.response?.data?.message || error.message || '密码验证失败'
+  } finally {
+    passwordSubmitting.value = false
   }
 }
 
@@ -108,6 +205,10 @@ const handleSubmit = async () => {
   } catch (error) {
     console.error('报名失败:', error)
     submitError.value = error.response?.data?.message || error.message || '报名失败，请稍后重试'
+    if (error?.response?.status === 403) {
+      showRegisterDialog.value = false
+      promptMessage.value = submitError.value
+    }
   } finally {
     submitting.value = false
   }
@@ -116,6 +217,11 @@ const handleSubmit = async () => {
 const handleCancel = () => {
   showRegisterDialog.value = false
   router.go(-1)
+}
+
+const handlePromptClose = () => {
+  promptMessage.value = ''
+  router.replace('/contests')
 }
 
 onMounted(() => {
@@ -178,7 +284,8 @@ onMounted(() => {
 }
 
 .form-item input[type='text'],
-.form-item input[type='email'] {
+.form-item input[type='email'],
+.form-item input[type='password'] {
   padding: 8px 12px;
   border: 1px solid #d9d9d9;
   border-radius: 6px;
@@ -261,6 +368,20 @@ onMounted(() => {
   margin-top: 10px;
   color: #ff4d4f;
   font-size: 13px;
+}
+
+.prompt-dialog {
+  text-align: center;
+}
+
+.prompt-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.prompt-dialog .dialog-actions {
+  justify-content: center;
+  margin-top: 24px;
 }
 
 @media (max-width: 480px) {

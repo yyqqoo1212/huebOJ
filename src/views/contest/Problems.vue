@@ -13,6 +13,7 @@
             v-for="problem in problems" 
             :key="problem.id"
             class="problem-item"
+            :class="{ solved: problem.is_accepted }"
             @click="goToProblem(problem)"
           >
             <div class="problem-id">{{ problem.display_order }}</div>
@@ -129,6 +130,17 @@ onMounted(() => {
   background-color: #f0f7ff;
   transform: translateX(4px);
   box-shadow: 0 2px 8px rgba(24, 144, 255, 0.1);
+}
+
+.problem-item.solved {
+  border-color: #b7eb8f;
+  background-color: #f6ffed;
+}
+
+.problem-item.solved:hover {
+  border-color: #95de64;
+  background-color: #f6ffed;
+  box-shadow: 0 2px 8px rgba(82, 196, 26, 0.15);
 }
 
 .problem-id {

@@ -15,23 +15,56 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { getContestDetail } from '@/api/contest'
 
 const route = useRoute()
+const showRank = ref(true)
+
+const fetchContestPermission = async () => {
+  const contestId = route.params.id
+  if (!contestId) return
+  try {
+    const res = await getContestDetail(contestId)
+    const permissionConfig = res?.data?.permission_config
+    if (permissionConfig && typeof permissionConfig.show_rank === 'boolean') {
+      showRank.value = permissionConfig.show_rank
+      return
+    }
+  } catch (error) {
+    console.error('获取比赛权限配置失败:', error)
+  }
+  showRank.value = true
+}
 
 const navItems = computed(() => {
   const contestId = route.params.id
   const basePath = `/contests/${contestId}`
   
-  return [
+  const items = [
     { path: `${basePath}/description`, label: '比赛描述' },
     { path: `${basePath}/problems`, label: '题目' },
     { path: `${basePath}/submissions`, label: '提交' },
-    { path: `${basePath}/ranking`, label: '排名' },
     { path: `${basePath}/announcements`, label: '公告' }
   ]
+
+  if (showRank.value) {
+    items.splice(3, 0, { path: `${basePath}/ranking`, label: '排名' })
+  }
+  return items
 })
+
+onMounted(() => {
+  fetchContestPermission()
+})
+
+watch(
+  () => route.params.id,
+  () => {
+    fetchContestPermission()
+  }
+)
 </script>
 
 <style scoped>

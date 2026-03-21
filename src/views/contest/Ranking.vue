@@ -2,7 +2,10 @@
   <div class="contest-ranking icpc">
     <div class="ranking-container">
       <div class="ranking-card">
-        <div v-if="rankings.length > 0" class="ranking-table">
+        <div v-if="forbiddenMessage" class="empty-state">
+          <p>{{ forbiddenMessage }}</p>
+        </div>
+        <div v-else-if="rankings.length > 0" class="ranking-table">
           <div class="table-header">
             <div class="col-rank">排名</div>
             <div class="col-user">用户</div>
@@ -47,7 +50,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { getContestRankings } from '@/api/contest'
 
@@ -55,6 +58,7 @@ const rankings = ref([])
 const route = useRoute()
 const contestType = ref('')
 const problemOrder = ['A', 'B', 'C', 'D']
+const forbiddenMessage = ref('')
 
 const formatScore = (score) => {
   const v = Number(score)
@@ -72,24 +76,45 @@ const formatTime = (t) => {
   return String(Math.floor(v))
 }
 
-onMounted(() => {
+const fetchRankings = () => {
   const contestId = Number(route.params.id)
   if (!contestId) return
 
   getContestRankings(contestId)
     .then((response) => {
       if (response.code === 'success' && response.data) {
+        forbiddenMessage.value = ''
         contestType.value = response.data.contestType || ''
         rankings.value = response.data.rankings || []
       } else {
+        forbiddenMessage.value = response?.message || ''
         rankings.value = []
       }
     })
     .catch((err) => {
       console.error('获取排行榜失败:', err)
       rankings.value = []
+      const status = err?.response?.status
+      if (status === 403) {
+        forbiddenMessage.value = err?.response?.data?.message || '该比赛未开启排行榜展示'
+      } else {
+        forbiddenMessage.value = ''
+      }
     })
+}
+
+onMounted(() => {
+  fetchRankings()
 })
+
+watch(
+  () => route.params.id,
+  () => {
+    rankings.value = []
+    forbiddenMessage.value = ''
+    fetchRankings()
+  }
+)
 </script>
 
 <style scoped>

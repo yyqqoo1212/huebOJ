@@ -297,7 +297,8 @@ export default {
       try {
         const params = {
           page,
-          page_size: this.pagination.page_size
+          page_size: this.pagination.page_size,
+          include_hidden: true
         }
         const response = await getContestList(params)
          if (response.code === 'success' && response.data) {

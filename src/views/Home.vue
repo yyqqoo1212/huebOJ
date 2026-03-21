@@ -196,7 +196,7 @@ const fetchNotice = async () => {
 const fetchLatestProblems = async () => {
   problemsLoading.value = true
   try {
-    // 后端已按 create_time 倒序返回，这里直接取前 8 条
+    // 后端已按题目 id 倒序返回，这里直接取前 8 条
     const res = await getProblemList({ page: 1, page_size: 8 })
     if (res.code !== 'success') return
 

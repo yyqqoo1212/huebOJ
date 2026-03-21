@@ -183,6 +183,17 @@ export const getContestRegistration = (contestId) => {
 }
 
 /**
+ * 校验私有赛密码
+ * @param {number} contestId - 比赛ID
+ * @param {Object} data - 密码数据
+ * @param {string} data.password - 比赛密码
+ * @returns {Promise}
+ */
+export const verifyContestPassword = (contestId, data = {}) => {
+  return http.post(`/contests/${contestId}/password/verify`, data)
+}
+
+/**
  * 报名比赛
  * @param {number} contestId - 比赛ID
  * @param {Object} data - 报名信息（real_name、student_id、school、phone、email、is_star）

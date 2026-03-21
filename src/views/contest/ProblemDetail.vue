@@ -98,10 +98,13 @@
               <div class="language-selector">
                 <label for="language">语言：</label>
                 <select id="language" v-model="selectedLanguage" class="language-select">
-                  <option value="cpp">C++</option>
-                  <option value="java">Java</option>
-                  <option value="python">Python</option>
-                  <option value="javascript">JavaScript</option>
+                  <option
+                    v-for="lang in availableLanguages"
+                    :key="lang"
+                    :value="lang"
+                  >
+                    {{ languageLabelMap[lang] || lang }}
+                  </option>
                 </select>
               </div>
 
@@ -138,7 +141,12 @@
                 <button class="btn-test" :class="{ active: showTestPanel }" @click="toggleTestPanel">
                   {{ showTestPanel ? '收起自测' : '在线自测' }}
                 </button>
-                <button class="btn-submit" @click="handleSubmit" :disabled="submitLoading">
+                <button
+                  class="btn-submit"
+                  @click="handleSubmit"
+                  :disabled="submitLoading || !canSubmitAfterEndRule"
+                  :title="!canSubmitAfterEndRule ? submitBlockReason : ''"
+                >
                   {{ submitLoading ? '提交中...' : '提交代码' }}
                 </button>
               </div>
@@ -225,7 +233,7 @@ import { useRoute, useRouter } from 'vue-router'
 import MarkdownIt from 'markdown-it'
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
-import { getContestProblemDetail } from '@/api/contest'
+import { getContestDetail, getContestProblemDetail } from '@/api/contest'
 import { runTest, submitCode } from '@/api/problem'
 import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, highlightSpecialChars, drawSelection, dropCursor, rectangularSelection, crosshairCursor } from '@codemirror/view'
 import { EditorState, Compartment } from '@codemirror/state'
@@ -269,6 +277,7 @@ const sampleList = ref([])
 const editorContainer = ref(null)
 const editor = ref(null)
 const selectedLanguage = ref('cpp')
+const availableLanguages = ref(['cpp', 'java', 'python', 'javascript'])
 const languageCompartment = ref(null)
 const fontSize = ref(14)
 const isDarkTheme = ref(true)
@@ -282,6 +291,12 @@ const defaultCode = {
   java: ``,
   python: ``,
   javascript: ``
+}
+const languageLabelMap = {
+  cpp: 'C++',
+  java: 'Java',
+  python: 'Python',
+  javascript: 'JavaScript'
 }
 
 // 在线自测
@@ -299,6 +314,13 @@ const md = new MarkdownIt({
 
 const contestId = computed(() => route.params.id)
 const problemId = computed(() => route.params.problemId)
+const contestStatus = ref('')
+const allowSubmitAfterEnd = ref(false)
+const canSubmitAfterEndRule = computed(() => {
+  if (contestStatus.value === '已结束') return allowSubmitAfterEnd.value
+  return true
+})
+const submitBlockReason = computed(() => '该比赛已结束，当前不允许继续提交代码')
 
 function parseSamples(inputDemo, outputDemo) {
   sampleList.value = []
@@ -387,6 +409,23 @@ async function loadContestProblem() {
   loading.value = true
   error.value = ''
   try {
+    // 使用比赛规则配置中的 language_limit 控制语言下拉
+    const contestResp = await getContestDetail(contestId.value)
+    const languageLimit = contestResp?.data?.rule_config?.language_limit
+    contestStatus.value = contestResp?.data?.status || ''
+    allowSubmitAfterEnd.value = Boolean(contestResp?.data?.rule_config?.allow_submit_after_end)
+    if (Array.isArray(languageLimit) && languageLimit.length > 0) {
+      const filtered = languageLimit
+        .map(item => String(item || '').trim())
+        .filter(lang => Object.prototype.hasOwnProperty.call(languageLabelMap, lang))
+      availableLanguages.value = filtered.length > 0 ? Array.from(new Set(filtered)) : ['cpp', 'java', 'python', 'javascript']
+    } else {
+      availableLanguages.value = ['cpp', 'java', 'python', 'javascript']
+    }
+    if (!availableLanguages.value.includes(selectedLanguage.value)) {
+      selectedLanguage.value = availableLanguages.value[0] || 'cpp'
+    }
+
     // 单次请求：比赛题目详情（含 display_order/display_title），不再先拉列表
     const detailResp = await getContestProblemDetail(contestId.value, problemId.value)
     if (detailResp.code !== 'success' || !detailResp.data) {
@@ -543,6 +582,10 @@ function goToSubmissionDetail() {
 async function handleSubmit() {
   if (!realProblemId.value) return
   if (!editor.value) return
+  if (!canSubmitAfterEndRule.value) {
+    submissionStatus.value = submitBlockReason.value
+    return
+  }
 
   const code = editor.value.state.doc.toString()
   if (!code.trim()) {
